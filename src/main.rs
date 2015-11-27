@@ -1,7 +1,10 @@
+extern crate notify;
+
+use notify::{RecommendedWatcher, Error, Watcher};
+use std::sync::mpsc::channel;
+
 use std::env;
 use std::process;
-use std::time::Duration;
-use std::thread;
 
 use flow::tail::Tail;
 pub mod flow {
@@ -27,8 +30,19 @@ fn main() {
     let mut tail = Tail::new(target);
     let data = tail.read_lines(lines);
     print!("{}", data);
+
+    let (tx, rx) = channel();
+    let mut w: Result<RecommendedWatcher, Error> = Watcher::new(tx);
+
     loop {
-        thread::sleep(Duration::from_millis(1000));
-        print!("{}", tail.read_to_end());
+        match w {
+            Ok(ref mut watcher) => {
+                watcher.watch(target);
+                match rx.recv() {
+                    _ => print!("{}", tail.read_to_end())
+                }
+            },
+            Err(ref e) => panic!("Error while scanning for changes: {message:?}", message = e)
+        }
     }
 }
