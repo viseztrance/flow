@@ -2,16 +2,42 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::SeekFrom;
 
+use notify::{RecommendedWatcher, Error, Watcher};
+use std::sync::mpsc::channel;
+
 pub struct Tail {
     file: File,
+    path: String,
     start_of_file_reached: bool
 }
 
 impl Tail {
     pub fn new(file_path: String) -> Tail {
         Tail {
-            file: File::open(file_path).unwrap(),
+            file: File::open(&file_path).unwrap(),
+            path: file_path,
             start_of_file_reached: false
+        }
+    }
+
+    pub fn watch<F>(&mut self, callback: F) where F : Fn(Vec<String>) {
+        let (tx, rx) = channel();
+        let mut w: Result<RecommendedWatcher, Error> = Watcher::new(tx);
+
+        loop {
+            match w {
+                Ok(ref mut watcher) => {
+                    let _ = watcher.watch(&self.path);
+
+                    match rx.recv() {
+                        _ => {
+                            let data = self.read_to_end();
+                            callback(data);
+                        }
+                    }
+                },
+                Err(ref e) => panic!("Error while scanning for changes: {message:?}", message = e)
+            }
         }
     }
 

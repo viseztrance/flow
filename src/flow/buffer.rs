@@ -3,6 +3,13 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    pub fn from_names(names: Vec<&str>) -> Vec<Buffer> {
+        names
+            .iter()
+            .map(|name| Buffer::new(name.to_string()))
+            .collect()
+    }
+
     pub fn new(name: String) -> Buffer {
         Buffer {
             name: name

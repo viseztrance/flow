@@ -1,55 +1,55 @@
-use notify::{RecommendedWatcher, Error, Watcher};
-use std::sync::mpsc::channel;
+use std::sync::{Arc, Mutex};
 
-use flow::tail::Tail;
-use flow::buffer::Buffer;
+use flow::ui::{Ui, Key};
 
 pub struct Flow {
-    tail: Tail,
-    target: String,
-    lines: Vec<String>,
-    buffers: Vec<Buffer>
+    ui: Ui,
+    lines: Vec<String>
 }
 
 impl Flow {
-    pub fn new(target: String) -> Flow {
+    pub fn new(buffers: Vec<&str>) -> Flow {
         Flow {
-            tail: Tail::new(target.clone()),
-            target: target,
-            lines: vec![],
-            buffers: vec![Buffer::new("my first buffer".to_string()), Buffer::new("my last buffer".to_string())]
+            ui: Ui::new(buffers),
+            lines: vec![]
         }
     }
 
-    pub fn read(&mut self, line_count: usize) {
-        let data = self.tail.read_lines(line_count);
-        self.process(data);
+    pub fn render(&self) {
+        self.ui.render();
     }
 
-    pub fn watch(&mut self) {
-        let (tx, rx) = channel();
-        let mut w: Result<RecommendedWatcher, Error> = Watcher::new(tx);
+    pub fn terminate(&self) {
+        self.ui.destroy();
+    }
 
+    pub fn process(&mut self, lines: Arc<Mutex<Vec<String>>>) {
         loop {
-            match w {
-                Ok(ref mut watcher) => {
-                    watcher.watch(&self.target);
-
-                    match rx.recv() {
-                        _ => {
-                            let data = self.tail.read_to_end();
-                            self.process(data);
-                        }
-                    }
+            match self.ui.read_input() {
+                Key::Left => {
+                    self.ui.select_left_menu_item();
+                    self.display();
                 },
-                Err(ref e) => panic!("Error while scanning for changes: {message:?}", message = e)
-            }
+                Key::Right => {
+                    self.ui.select_right_menu_item();
+                    self.display();
+                },
+                Key::Unknown => {
+                    let mut mutex_guarded_lines = lines.lock().unwrap();
+                    let pending_lines = mutex_guarded_lines.drain(..).collect();
+                    self.append_and_display(pending_lines);
+                }
+            };
         }
     }
 
-    pub fn process(&mut self, data: Vec<String>) {
-        // println!("{:?}", data);
-        self.lines.extend(data);
-        self.buffers[0].render(&self.lines);
+    pub fn display(&self) {
+        self.ui.clear();
+        self.ui.print(&self.lines);
+    }
+
+    pub fn append_and_display(&mut self, pending_lines: Vec<String>) {
+        self.ui.print(&pending_lines);
+        self.lines.extend(pending_lines);
     }
 }

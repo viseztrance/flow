@@ -5,3 +5,9 @@ authors = ["Daniel Mircea <daniel@viseztrance.com>"]
 
 [dependencies]
 notify = "^2.4.1"
+
+[dependencies.ncurses]
+git = "https://github.com/jeaye/ncurses-rs"
+rev = "master"
+default-features = false
+features = ["menu"]
