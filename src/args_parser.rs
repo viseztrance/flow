@@ -1,4 +1,5 @@
 use std::process;
+use std::path::Path;
 use getopts::{Options, Matches};
 
 pub struct ParsedArgs {
@@ -47,7 +48,13 @@ impl ArgsParser {
 
     fn get_target(&self, found_matches: &Matches) -> String {
         match found_matches.free.get(0) {
-            Some(value) => value.to_string(),
+            Some(value) => {
+                if !Path::new(value).exists() {
+                    println!("No file exists at provided location `{}`", value);
+                    process::exit(2);
+                }
+                value.to_string()
+            },
             None => {
                 self.print_usage();
                 process::exit(1);
