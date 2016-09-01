@@ -2,6 +2,7 @@
 name = "flow"
 version = "0.1.0"
 dependencies = [
+ "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncurses 5.80.0 (git+https://github.com/jeaye/ncurses-rs?rev=master)",
  "notify 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -38,6 +39,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "getopts"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "inotify"

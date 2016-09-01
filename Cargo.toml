@@ -5,6 +5,7 @@ authors = ["Daniel Mircea <daniel@viseztrance.com>"]
 
 [dependencies]
 notify = "^2.4.1"
+getopts = "0.2"
 
 [dependencies.ncurses]
 git = "https://github.com/jeaye/ncurses-rs"
