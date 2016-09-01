@@ -1,6 +1,7 @@
 use std::io::prelude::*;
 use std::fs::File;
 use std::io::SeekFrom;
+use std::process;
 
 use notify::{RecommendedWatcher, Error, Watcher};
 use std::sync::mpsc::channel;
@@ -13,8 +14,16 @@ pub struct Tail {
 
 impl Tail {
     pub fn new(file_path: String) -> Tail {
+        let file_handler = match File::open(&file_path) {
+            Ok(value) => value,
+            Err(message) => {
+                println!("`{}` couldn't be opened - {}", file_path, message);
+                process::exit(2);
+            }
+        };
+
         Tail {
-            file: File::open(&file_path).unwrap(),
+            file: file_handler,
             path: file_path,
             start_of_file_reached: false
         }
