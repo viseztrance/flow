@@ -7,11 +7,11 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use args_parser::ArgsParser;
+use settings_builder::SettingsBuilder;
 use flow::tail::Tail;
 use flow::flow::Flow;
 
-pub mod args_parser;
+pub mod settings_builder;
 pub mod flow {
     pub mod flow;
     pub mod tail;
@@ -22,7 +22,7 @@ pub mod flow {
 fn main() {
     let args = env::args().collect();
 
-    let parsed_args = ArgsParser::new(args).process();
+    let parsed_args = SettingsBuilder::new(args).make();
     run(parsed_args.path_to_target_file, parsed_args.line_count);
 }
 
