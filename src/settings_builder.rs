@@ -3,11 +3,14 @@ use std::path::Path;
 use getopts::{Options, Matches};
 
 static DEFAULT_LAST_LINES_SHOWN: usize = 10;
+static DEFAULT_MAX_LINES_STORED: usize = 5000;
 
 pub struct Settings {
     pub path_to_target_file: String,
     pub path_to_config_file: String,
-    pub line_count: usize
+    pub last_lines_count: usize,
+    pub max_lines_count: usize,
+    pub buffers: Vec<String>
 }
 
 pub struct SettingsBuilder {
@@ -37,7 +40,9 @@ impl SettingsBuilder {
         Settings {
             path_to_target_file: self.get_target(),
             path_to_config_file: self.get_config(),
-            line_count: self.get_lines()
+            buffers: vec!["lorem".to_string(), "ipsum!".to_string()],
+            max_lines_count: self.get_max_lines_count(),
+            last_lines_count: self.get_last_lines_count()
         }
     }
 
@@ -66,10 +71,17 @@ impl SettingsBuilder {
         }
     }
 
-    fn get_lines(&self) -> usize {
+    fn get_last_lines_count(&self) -> usize {
         match self.matches.opt_str("n") {
             Some(value) => value.parse::<usize>().unwrap(),
             None => DEFAULT_LAST_LINES_SHOWN
+        }
+    }
+
+    fn get_max_lines_count(&self) -> usize {
+        match self.matches.opt_str("m") {
+            Some(value) => value.parse::<usize>().unwrap(),
+            None => DEFAULT_MAX_LINES_STORED
         }
     }
 
@@ -84,6 +96,7 @@ impl SettingsBuilder {
 fn build_opts() -> Options {
     let mut opts = Options::new();
     opts.optopt("n", "lines", &format!("Output the last NUM lines. Default is {}.", DEFAULT_LAST_LINES_SHOWN), "NUM");
+    opts.optopt("m", "max", &format!("Maximum amount of lines to be stored in memory. Default is {}.", DEFAULT_MAX_LINES_STORED), "MAX");
     opts.optopt("c", "config", "Path to a config file. Defaults to looking in the current directory and user home.", "CONFIG");
     opts.optflag("h", "help", "Print this help menu.");
     opts

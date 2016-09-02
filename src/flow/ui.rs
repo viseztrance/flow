@@ -12,7 +12,7 @@ pub struct Ui {
 }
 
 impl Ui {
-    pub fn new(menu_items: Vec<&str>) -> Ui {
+    pub fn new(menu_items: &Vec<String>) -> Ui {
         initscr();
         start_color();
         cbreak();
@@ -50,8 +50,8 @@ impl Ui {
         endwin();
     }
 
-    pub fn print(&self, lines: &Vec<String>) {
-        for line in lines.iter() {
+    pub fn print<'a, I>(&self, lines: I) where I: IntoIterator<Item = &'a String> {
+        for line in lines {
             wprintw(self.content, &format!("{}\n", line));
         }
 
@@ -78,11 +78,11 @@ struct Menu {
 }
 
 impl Menu {
-    fn new(position_x: i32, position_y: i32, values: Vec<&str>) -> Menu {
+    fn new(position_x: i32, position_y: i32, values: &Vec<String>) -> Menu {
         let mut items = vec![];
 
         for value in values {
-            items.push(new_item(value, ""));
+            items.push(new_item(value.as_str(), ""));
         }
 
         let object = new_menu(&mut items);

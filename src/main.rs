@@ -7,7 +7,7 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use settings_builder::SettingsBuilder;
+use settings_builder::{SettingsBuilder, Settings};
 use flow::tail::Tail;
 use flow::flow::Flow;
 
@@ -22,14 +22,14 @@ pub mod flow {
 fn main() {
     let args = env::args().collect();
 
-    let parsed_args = SettingsBuilder::new(args).make();
-    run(parsed_args.path_to_target_file, parsed_args.line_count);
+    let settings = SettingsBuilder::new(args).make();
+    run(settings);
 }
 
-fn run(target: String, line_count: usize) {
-    let mut tail = Tail::new(target);
+fn run(settings: Settings) {
+    let mut tail = Tail::new(settings.path_to_target_file.clone());
 
-    let lines = Arc::new(Mutex::new(tail.read_lines(line_count)));
+    let lines = Arc::new(Mutex::new(tail.read_lines(settings.last_lines_count)));
 
     let reader_lines = lines.clone();
     let reader_thread = thread::spawn(move || {
@@ -38,7 +38,7 @@ fn run(target: String, line_count: usize) {
 
     let consumer_lines = lines.clone();
     let consumer_thread = thread::spawn(move || {
-        let mut flow = Flow::new(vec!["lorem", "ipsum!"]);
+        let mut flow = Flow::new(settings);
         flow.render();
         flow.process(consumer_lines);
         flow.terminate();

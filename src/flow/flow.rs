@@ -1,17 +1,21 @@
 use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
 
+use settings_builder::{Settings};
 use flow::ui::{Ui, Key};
 
 pub struct Flow {
     ui: Ui,
-    lines: Vec<String>
+    lines: VecDeque<String>,
+    settings: Settings
 }
 
 impl Flow {
-    pub fn new(buffers: Vec<&str>) -> Flow {
+    pub fn new(settings: Settings) -> Flow {
         Flow {
-            ui: Ui::new(buffers),
-            lines: vec![]
+            ui: Ui::new(&settings.buffers),
+            lines: VecDeque::new(),
+            settings: settings
         }
     }
 
@@ -50,6 +54,14 @@ impl Flow {
 
     pub fn append_and_display(&mut self, pending_lines: Vec<String>) {
         self.ui.print(&pending_lines);
+        self.append(pending_lines);
+    }
+
+    fn append(&mut self, pending_lines: Vec<String>) {
         self.lines.extend(pending_lines);
+
+        while self.lines.len() > self.settings.max_lines_count {
+            self.lines.pop_front();
+        }
     }
 }
