@@ -1,0 +1,11 @@
+[[tabs]]
+name = "All"
+filter = "*"
+
+[[tabs]]
+name = "Having X"
+filter = "x"
+
+[[tabs]]
+name = "Having xy"
+filter = "xy"

@@ -1,16 +1,20 @@
 use std::process;
-use std::path::Path;
+use std::env;
+use std::fs::File;
+use std::io::Read;
+use std::path::PathBuf;
 use getopts::{Options, Matches};
+use toml;
+
 
 static DEFAULT_LAST_LINES_SHOWN: usize = 10;
 static DEFAULT_MAX_LINES_STORED: usize = 5000;
 
 pub struct Settings {
     pub path_to_target_file: String,
-    pub path_to_config_file: String,
     pub last_lines_count: usize,
     pub max_lines_count: usize,
-    pub buffers: Vec<String>
+    pub config_file: ConfigFile
 }
 
 pub struct SettingsBuilder {
@@ -39,8 +43,7 @@ impl SettingsBuilder {
 
         Settings {
             path_to_target_file: self.get_target(),
-            path_to_config_file: self.get_config(),
-            buffers: vec!["lorem".to_string(), "ipsum!".to_string()],
+            config_file: ConfigFile::from_path(self.calculate_config_path()),
             max_lines_count: self.get_max_lines_count(),
             last_lines_count: self.get_last_lines_count()
         }
@@ -54,7 +57,7 @@ impl SettingsBuilder {
     fn get_target(&self) -> String {
         match self.matches.free.get(0) {
             Some(value) => {
-                self.assert_file_exists(value);
+                self.assert_file_exists(&PathBuf::from(value));
                 value.to_string()
             },
             None => {
@@ -64,10 +67,29 @@ impl SettingsBuilder {
         }
     }
 
-    fn get_config(&self) -> String {
+    fn calculate_config_path(&self) -> PathBuf {
         match self.matches.opt_str("c") {
-            Some(value) => value.to_string(),
-            None => "some/path".to_string() // TODO: fallback to CWD and user home
+            Some(value) => {
+                let path = PathBuf::from(value);
+                self.assert_file_exists(&path);
+                path
+            },
+            None => {
+                let mut current_dir_config_path = env::current_dir().unwrap();
+                current_dir_config_path.push(".flow");
+
+                let mut home_dir_config_path = env::home_dir().unwrap();
+                home_dir_config_path.push(".flow");
+
+                if current_dir_config_path.exists() {
+                    current_dir_config_path
+                } else if home_dir_config_path.exists() {
+                    home_dir_config_path
+                } else {
+                    println!("No config file found.");
+                    process::exit(1);
+                }
+            }
         }
     }
 
@@ -85,12 +107,54 @@ impl SettingsBuilder {
         }
     }
 
-    fn assert_file_exists(&self, path: &str) {
-        if !Path::new(path).exists() {
-            println!("No file exists at provided location `{}`", path);
+    fn assert_file_exists(&self, path: &PathBuf) {
+        if !path.exists() {
+            println!("No file exists at provided location `{:?}`", path);
             process::exit(2);
         }
     }
+}
+
+#[derive(RustcDecodable)]
+pub struct ConfigFile {
+    pub tabs: Vec<MenuItem>
+}
+
+impl ConfigFile {
+    pub fn from_path(path: PathBuf) -> ConfigFile {
+        let mut file_handle = match File::open(&path) {
+            Ok(value) => value,
+            Err(message) => {
+                println!("{:?} couldn't be opened - {}", path, message);
+                process::exit(2);
+            }
+        };
+
+        let ref mut contents = String::new();
+        let _ = file_handle.read_to_string(contents);
+
+        let parsed_contents =  match toml::Parser::new(contents).parse() {
+            Some(value) => value,
+            None => {
+                println!("Provided config file {:?} doesn't have a valid format.", path);
+                process::exit(2);
+            }
+        };
+
+        match toml::decode(toml::Value::Table(parsed_contents)) {
+            Some(value) => value,
+            None => {
+                println!("Error deserializing config");
+                process::exit(2);
+            }
+        }
+    }
+}
+
+#[derive(RustcDecodable)]
+pub struct MenuItem {
+    pub name: String,
+    pub filter: String
 }
 
 fn build_opts() -> Options {

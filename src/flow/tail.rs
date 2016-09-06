@@ -14,7 +14,7 @@ pub struct Tail {
 
 impl Tail {
     pub fn new(file_path: String) -> Tail {
-        let file_handler = match File::open(&file_path) {
+        let file_handle = match File::open(&file_path) {
             Ok(value) => value,
             Err(message) => {
                 println!("`{}` couldn't be opened - {}", file_path, message);
@@ -23,7 +23,7 @@ impl Tail {
         };
 
         Tail {
-            file: file_handler,
+            file: file_handle,
             path: file_path,
             start_of_file_reached: false
         }

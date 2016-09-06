@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
-use settings_builder::{Settings};
+use settings::Settings;
 use flow::ui::{Ui, Key};
 
 pub struct Flow {
@@ -12,8 +12,15 @@ pub struct Flow {
 
 impl Flow {
     pub fn new(settings: Settings) -> Flow {
+        let tab_names = settings
+            .config_file
+            .tabs
+            .iter()
+            .map(|tab| tab.name.clone())
+            .collect();
+
         Flow {
-            ui: Ui::new(&settings.buffers),
+            ui: Ui::new(&tab_names),
             lines: VecDeque::new(),
             settings: settings
         }

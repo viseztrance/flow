@@ -1,17 +1,19 @@
 extern crate notify;
 extern crate ncurses;
 extern crate getopts;
+extern crate toml;
+extern crate rustc_serialize;
 
 use std::env;
 
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use settings_builder::{SettingsBuilder, Settings};
+use settings::{SettingsBuilder, Settings};
 use flow::tail::Tail;
 use flow::flow::Flow;
 
-pub mod settings_builder;
+pub mod settings;
 pub mod flow {
     pub mod flow;
     pub mod tail;
