@@ -6,14 +6,13 @@ use std::path::PathBuf;
 use getopts::{Options, Matches};
 use toml;
 
+use flow::filter::Filter;
 
 static DEFAULT_LAST_LINES_SHOWN: usize = 10;
 static DEFAULT_MAX_LINES_STORED: usize = 5000;
 
 pub struct Settings {
-    pub path_to_target_file: String,
-    pub last_lines_count: usize,
-    pub max_lines_count: usize,
+    pub values: SettingsValues,
     pub config_file: ConfigFile
 }
 
@@ -41,11 +40,17 @@ impl SettingsBuilder {
             process::exit(0);
         }
 
-        Settings {
+        let values = SettingsValues {
             path_to_target_file: self.get_target(),
-            config_file: ConfigFile::from_path(self.calculate_config_path()),
             max_lines_count: self.get_max_lines_count(),
             last_lines_count: self.get_last_lines_count()
+        };
+
+        let config_file = ConfigFile::from_path(self.calculate_config_path());
+
+        Settings {
+            values: values,
+            config_file: config_file,
         }
     }
 
@@ -115,9 +120,15 @@ impl SettingsBuilder {
     }
 }
 
+pub struct SettingsValues {
+    pub path_to_target_file: String,
+    pub last_lines_count: usize,
+    pub max_lines_count: usize
+}
+
 #[derive(RustcDecodable)]
 pub struct ConfigFile {
-    pub tabs: Vec<MenuItem>
+    pub filters: Vec<Filter>
 }
 
 impl ConfigFile {
@@ -149,12 +160,6 @@ impl ConfigFile {
             }
         }
     }
-}
-
-#[derive(RustcDecodable)]
-pub struct MenuItem {
-    pub name: String,
-    pub filter: String
 }
 
 fn build_opts() -> Options {

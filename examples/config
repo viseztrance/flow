@@ -1,11 +1,11 @@
-[[tabs]]
+[[filters]]
 name = "All"
-filter = "*"
+rule = ".*"
 
-[[tabs]]
+[[filters]]
 name = "Having X"
-filter = "x"
+rule = "x"
 
-[[tabs]]
+[[filters]]
 name = "Having xy"
-filter = "xy"
+rule = "xy"

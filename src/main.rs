@@ -3,6 +3,7 @@ extern crate ncurses;
 extern crate getopts;
 extern crate toml;
 extern crate rustc_serialize;
+extern crate regex;
 
 use std::env;
 
@@ -17,7 +18,7 @@ pub mod settings;
 pub mod flow {
     pub mod flow;
     pub mod tail;
-    pub mod buffer;
+    pub mod filter;
     pub mod ui;
 }
 
@@ -29,9 +30,9 @@ fn main() {
 }
 
 fn run(settings: Settings) {
-    let mut tail = Tail::new(settings.path_to_target_file.clone());
+    let mut tail = Tail::new(settings.values.path_to_target_file.clone());
 
-    let lines = Arc::new(Mutex::new(tail.read_lines(settings.last_lines_count)));
+    let lines = Arc::new(Mutex::new(tail.read_lines(settings.values.last_lines_count)));
 
     let reader_lines = lines.clone();
     let reader_thread = thread::spawn(move || {

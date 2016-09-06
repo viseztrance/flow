@@ -50,11 +50,11 @@ impl Ui {
         endwin();
     }
 
-    pub fn print<'a, I>(&self, lines: I) where I: IntoIterator<Item = &'a String> {
-        for line in lines {
-            wprintw(self.content, &format!("{}\n", line));
-        }
+    pub fn print(&self, line: &str) {
+        wprintw(self.content, &format!("{}\n", line));
+    }
 
+    pub fn refresh(&self) {
         wrefresh(self.content);
     }
 

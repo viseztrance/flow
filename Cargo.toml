@@ -12,6 +12,7 @@ notify = "^2.4.1"
 getopts = "0.2"
 toml = "0.2"
 rustc-serialize = "0.3"
+regex = "0.1"
 
 [dependencies.ncurses]
 git = "https://github.com/jeaye/ncurses-rs"
