@@ -15,6 +15,7 @@ impl Ui {
     pub fn new(menu_items: &Vec<String>) -> Ui {
         initscr();
         start_color();
+        use_default_colors();
         cbreak();
         noecho();
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
@@ -22,7 +23,6 @@ impl Ui {
         keypad(stdscr, true);
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_WHITE, COLOR_GREEN);
-        init_pair(3, COLOR_WHITE, COLOR_YELLOW);
 
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
@@ -34,7 +34,6 @@ impl Ui {
         self.menu.render(COLOR_PAIR(1), COLOR_PAIR(2));
 
         scrollok(self.content, true);
-        wbkgd(self.content, COLOR_PAIR(3));
     }
 
     pub fn select_left_menu_item(&self) {
