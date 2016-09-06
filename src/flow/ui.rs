@@ -13,6 +13,8 @@ pub struct Ui {
 
 impl Ui {
     pub fn new(menu_items: &Vec<String>) -> Ui {
+        setlocale(LcCategory::all, ""); // Must be set *before* init
+
         initscr();
         start_color();
         use_default_colors();
