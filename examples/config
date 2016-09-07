@@ -1,6 +1,5 @@
 [[filters]]
 name = "All"
-rule = ".*"
 
 [[filters]]
 name = "Having X"

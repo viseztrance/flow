@@ -1,14 +1,24 @@
+use std::cmp;
 use ncurses::*;
+use unicode_width::UnicodeWidthStr;
 
 pub enum Key {
+    Up,
+    Down,
     Left,
-    Right,
-    Unknown
+    Right
+}
+
+pub enum Event {
+    SelectMenuItem(Key),
+    ScrollContents(Key),
+    Other
 }
 
 pub struct Ui {
     menu: Menu,
-    content: WINDOW
+    content: WINDOW,
+    screen_lines: i32
 }
 
 impl Ui {
@@ -22,13 +32,20 @@ impl Ui {
         noecho();
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
         halfdelay(1);
+        mouseinterval(0);
         keypad(stdscr, true);
+
+        // let mouse_events = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
+        let mouse_events = BUTTON4_PRESSED | BUTTON5_PRESSED;
+        mousemask(mouse_events as u64, None);
+
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_WHITE, COLOR_GREEN);
 
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
-            content: newwin(LINES - 1, COLS, 0, 0)
+            content: newpad(5000, COLS),
+            screen_lines: 0
         }
     }
 
@@ -51,8 +68,26 @@ impl Ui {
         endwin();
     }
 
-    pub fn print(&self, line: &str) {
-        wprintw(self.content, &format!("{}\n", line));
+    pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a String> + 'a>, usize)) {
+        let (lines, scroll_offset) = data;
+        self.screen_lines = 0;
+
+        for line in lines {
+            self.screen_lines += self.calculate_line_height(line);
+            wprintw(self.content, &format!("{}\n", line));
+        }
+
+        self.scroll(scroll_offset as i32);
+    }
+
+    fn calculate_line_height(&self, line: &str) -> i32 {
+        let result = (line.width() as f32 / COLS as f32).ceil() as i32;
+        cmp::max(1, result)
+    }
+
+    pub fn scroll(&self, reversed_offset: i32) {
+        let offset =  self.screen_lines - LINES + 2 - reversed_offset;
+        prefresh(self.content, offset, 0, 0, 0, LINES - 2, COLS);
     }
 
     pub fn refresh(&self) {
@@ -63,12 +98,29 @@ impl Ui {
         wclear(self.content);
     }
 
-    pub fn read_input(&self) -> Key {
+    pub fn watch(&self) -> Event {
         match getch() {
-            KEY_LEFT => Key::Left,
-            KEY_RIGHT => Key::Right,
-            _ => Key::Unknown
+            KEY_LEFT => Event::SelectMenuItem(Key::Left),
+            KEY_RIGHT => Event::SelectMenuItem(Key::Right),
+            KEY_UP => Event::ScrollContents(Key::Up),
+            KEY_DOWN => Event::ScrollContents(Key::Down),
+            KEY_MOUSE => self.get_mouse_event(),
+            _ => Event::Other
         }
+    }
+
+    fn get_mouse_event(&self) -> Event {
+        let ref mut event = MEVENT {
+            id: 0, x: 0, y: 0, z: 0, bstate: 0
+        };
+        if getmouse(event) == OK {
+            if (event.bstate & BUTTON4_PRESSED as u64) != 0 {
+                return Event::ScrollContents(Key::Up)
+            } else if (event.bstate & BUTTON5_PRESSED as u64) != 0 {
+                return Event::ScrollContents(Key::Down)
+            }
+        }
+        Event::Other
     }
 }
 

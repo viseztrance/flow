@@ -4,6 +4,7 @@ extern crate getopts;
 extern crate toml;
 extern crate rustc_serialize;
 extern crate regex;
+extern crate unicode_width;
 
 use std::env;
 
@@ -18,7 +19,7 @@ pub mod settings;
 pub mod flow {
     pub mod flow;
     pub mod tail;
-    pub mod filter;
+    pub mod buffer;
     pub mod ui;
 }
 
