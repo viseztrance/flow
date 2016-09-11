@@ -2,7 +2,7 @@ use ncurses::*;
 
 pub struct Menu {
     object: MENU,
-    window: WINDOW,
+    pub window: WINDOW,
     items: Vec<ITEM>
 }
 

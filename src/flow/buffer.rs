@@ -4,22 +4,24 @@ use std::cell::RefCell;
 
 use regex::Regex;
 
+static DEFAULT_REVERSE_INDEX: usize = 0;
+
 #[derive(PartialEq)]
 pub enum ScrollState {
     Unchanged,
-    Changed,
+    Changed
 }
 
 pub struct Buffer {
     pub filter: BufferFilter,
-    pub reverse_index: usize,
+    pub reverse_index: usize
 }
 
 impl Buffer {
     pub fn new(filter: BufferFilter) -> Buffer {
         Buffer {
             filter: filter,
-            reverse_index: 0,
+            reverse_index: DEFAULT_REVERSE_INDEX
         }
     }
 
@@ -31,7 +33,7 @@ impl Buffer {
     }
 
     pub fn adjust_reverse_index(&mut self, value: i32, lines: &VecDeque<String>) -> ScrollState {
-        if value == 0 {
+        if value == DEFAULT_REVERSE_INDEX as i32 {
             return ScrollState::Unchanged;
         }
 
@@ -41,7 +43,11 @@ impl Buffer {
     }
 
     pub fn is_scrolled(&self) -> bool {
-        self.reverse_index != 0
+        self.reverse_index != DEFAULT_REVERSE_INDEX
+    }
+
+    pub fn reset_reverse_index(&mut self) {
+        self.reverse_index = DEFAULT_REVERSE_INDEX;
     }
 }
 

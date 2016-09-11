@@ -13,13 +13,16 @@ pub enum Direction {
 pub enum Event {
     SelectMenuItem(Direction),
     ScrollContents(i32),
+    Resize,
     Other
 }
 
 pub struct Ui {
+    pub screen_lines: i32,
     menu: Menu,
     content: WINDOW,
-    pub screen_lines: i32
+    height: i32,
+    width: i32
 }
 
 impl Ui {
@@ -42,7 +45,9 @@ impl Ui {
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
             content: newpad(5000, COLS),
-            screen_lines: 0
+            screen_lines: 0,
+            height: LINES,
+            width: COLS
         }
     }
 
@@ -63,6 +68,14 @@ impl Ui {
         endwin();
     }
 
+    pub fn resize(&mut self) {
+        getmaxyx(stdscr, &mut self.height, &mut self.width);
+        wresize(self.content, 5000, self.width);
+        mvwin(self.menu.window, self.height - 1, 0);
+        refresh();
+        wrefresh(self.menu.window);
+    }
+
     pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a String> + 'a>, usize)) {
         let (lines, scroll_offset) = data;
         self.screen_lines = 0;
@@ -76,13 +89,13 @@ impl Ui {
     }
 
     fn calculate_line_height(&self, line: &str) -> i32 {
-        let result = (line.width() as f32 / COLS as f32).ceil() as i32;
+        let result = (line.width() as f32 / self.width as f32).ceil() as i32;
         cmp::max(1, result)
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset =  self.screen_lines - LINES + 2 - reversed_offset;
-        prefresh(self.content, offset, 0, 0, 0, LINES - 2, COLS);
+        let offset =  self.screen_lines - self.height + 2 - reversed_offset;
+        prefresh(self.content, offset, 0, 0, 0, self.height - 2, self.width);
     }
 
     pub fn refresh(&self) {
@@ -95,11 +108,12 @@ impl Ui {
 
     pub fn watch(&self) -> Event {
         match getch() {
-            KEY_LEFT => Event::SelectMenuItem(Direction::Left),
-            KEY_RIGHT => Event::SelectMenuItem(Direction::Right),
-            KEY_UP => Event::ScrollContents(1),
-            KEY_DOWN => Event::ScrollContents(-1),
-            KEY_MOUSE => self.read_mouse_event(),
+            KEY_LEFT   => Event::SelectMenuItem(Direction::Left),
+            KEY_RIGHT  => Event::SelectMenuItem(Direction::Right),
+            KEY_UP     => Event::ScrollContents(1),
+            KEY_DOWN   => Event::ScrollContents(-1),
+            KEY_MOUSE  => self.read_mouse_event(),
+            KEY_RESIZE => Event::Resize,
             _ => Event::Other
         }
     }

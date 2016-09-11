@@ -43,6 +43,7 @@ impl Flow {
             match self.ui.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(value) => self.scroll(value),
+                Event::Resize => self.resize(),
                 _ => {
                     let mut mutex_guarded_lines = lines.lock().unwrap();
                     if !mutex_guarded_lines.is_empty() {
@@ -77,6 +78,12 @@ impl Flow {
             let offset = self.current_buffer().borrow().reverse_index as i32;
             self.ui.scroll(offset);
         }
+    }
+
+    fn resize(&mut self) {
+        self.ui.resize();
+        self.current_buffer().borrow_mut().reset_reverse_index();
+        self.reset_view();
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
