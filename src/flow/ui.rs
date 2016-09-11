@@ -1,24 +1,23 @@
 use std::cmp;
+
 use ncurses::*;
 use unicode_width::UnicodeWidthStr;
 
-pub enum Key {
-    Up,
-    Down,
+pub enum Direction {
     Left,
     Right
 }
 
 pub enum Event {
-    SelectMenuItem(Key),
-    ScrollContents(Key),
+    SelectMenuItem(Direction),
+    ScrollContents(i32),
     Other
 }
 
 pub struct Ui {
     menu: Menu,
     content: WINDOW,
-    screen_lines: i32
+    pub screen_lines: i32
 }
 
 impl Ui {
@@ -47,8 +46,6 @@ impl Ui {
 
     pub fn render(&self) {
         self.menu.render(COLOR_PAIR(1), COLOR_PAIR(2));
-
-        scrollok(self.content, true);
     }
 
     pub fn select_left_menu_item(&self) {
@@ -96,10 +93,10 @@ impl Ui {
 
     pub fn watch(&self) -> Event {
         match getch() {
-            KEY_LEFT => Event::SelectMenuItem(Key::Left),
-            KEY_RIGHT => Event::SelectMenuItem(Key::Right),
-            KEY_UP => Event::ScrollContents(Key::Up),
-            KEY_DOWN => Event::ScrollContents(Key::Down),
+            KEY_LEFT => Event::SelectMenuItem(Direction::Left),
+            KEY_RIGHT => Event::SelectMenuItem(Direction::Right),
+            KEY_UP => Event::ScrollContents(1),
+            KEY_DOWN => Event::ScrollContents(-1),
             KEY_MOUSE => self.get_mouse_event(),
             _ => Event::Other
         }
@@ -111,9 +108,9 @@ impl Ui {
         };
         if getmouse(event) == OK {
             if (event.bstate & BUTTON4_PRESSED as u64) != 0 {
-                return Event::ScrollContents(Key::Up)
+                return Event::ScrollContents(1)
             } else if (event.bstate & BUTTON5_PRESSED as u64) != 0 {
-                return Event::ScrollContents(Key::Down)
+                return Event::ScrollContents(-1)
             }
         }
         Event::Other

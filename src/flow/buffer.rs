@@ -1,11 +1,18 @@
+use std::cmp::{min, max};
 use std::collections::VecDeque;
 use std::cell::RefCell;
 
 use regex::Regex;
 
+#[derive(PartialEq)]
+pub enum ScrollState {
+    Unchanged,
+    Changed,
+}
+
 pub struct Buffer {
     pub filter: BufferFilter,
-    pub reverse_index: usize
+    pub reverse_index: usize,
 }
 
 impl Buffer {
@@ -17,28 +24,24 @@ impl Buffer {
     }
 
     pub fn parse<'a>(&self, lines: &'a VecDeque<String>) -> (Box<Iterator<Item=&'a String> + 'a>, usize) {
-        let regex = Regex::new(&self.filter.rule.clone().unwrap_or(".*".to_string())).unwrap();
+        let matcher = self.filter.matcher();
 
-        let parsed_lines = lines.iter().filter(move |line| regex.is_match(line));
+        let parsed_lines = lines.iter().filter(move |line| matcher.is_match(line));
         (Box::new(parsed_lines), self.reverse_index)
     }
 
-    pub fn increment_reverse_index(&mut self, value: usize, lines: &VecDeque<String>) {
-        if self.reverse_index + value < lines.len() {
-            self.reverse_index += value;
-        } else {
-            self.reverse_index = lines.len();
+    pub fn adjust_reverse_index(&mut self, value: i32, lines: &VecDeque<String>) -> ScrollState {
+        if value == 0 {
+            return ScrollState::Unchanged;
         }
+
+        let new_reverse_index = self.reverse_index as i32 + value;
+        self.reverse_index = min(max(0, new_reverse_index), lines.len() as i32) as usize;
+        ScrollState::Changed
     }
 
-    pub fn decrement_reverse_index(&mut self, value: usize) {
-        let future_index = self.reverse_index as isize - value as isize;
-
-        if future_index > 0 {
-            self.reverse_index -= value;
-        } else {
-            self.reverse_index = 0;
-        }
+    pub fn is_scrolled(&self) -> bool {
+        self.reverse_index != 0
     }
 }
 
@@ -46,6 +49,13 @@ impl Buffer {
 pub struct BufferFilter {
     pub name: String,
     pub rule: Option<String>,
+}
+
+impl BufferFilter {
+    pub fn matcher(&self) -> Regex {
+        let match_expression = self.rule.clone().unwrap_or(".*".to_string());
+        Regex::new(&match_expression).unwrap()
+    }
 }
 
 pub struct BufferCollection {
@@ -67,13 +77,13 @@ impl BufferCollection {
         self.items.get(self.index).unwrap()
     }
 
-    pub fn select_left_item(&mut self) {
+    pub fn select_previous(&mut self) {
         if self.index > 0 {
             self.index -= 1;
         }
     }
 
-    pub fn select_right_item(&mut self) {
+    pub fn select_next(&mut self) {
         if self.index + 1 < self.items.len() {
             self.index += 1;
         }
