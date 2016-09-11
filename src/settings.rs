@@ -34,7 +34,7 @@ impl SettingsBuilder {
         }
     }
 
-    pub fn make(&self) -> Settings {
+    pub fn construct(&self) -> Settings {
         if self.matches.opt_present("h") {
             self.print_usage();
             process::exit(0);

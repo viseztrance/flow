@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 
 use settings::{Settings, SettingsValues};
-use flow::ui::{Ui, Event, Direction};
+use ui::ui::{Ui, Event, Direction};
 use flow::buffer::{Buffer, BufferCollection, ScrollState};
 
 pub struct Flow {
