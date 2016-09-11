@@ -35,10 +35,6 @@ impl Ui {
         mouseinterval(0);
         keypad(stdscr, true);
 
-        // let mouse_events = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
-        let mouse_events = BUTTON4_PRESSED | BUTTON5_PRESSED;
-        mousemask(mouse_events as u64, None);
-
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_WHITE, COLOR_GREEN);
 
