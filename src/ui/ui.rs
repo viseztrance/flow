@@ -1,7 +1,4 @@
-use std::cmp::{min, max};
-
 use ncurses::*;
-use unicode_width::UnicodeWidthStr;
 
 use ui::menu::Menu;
 
@@ -81,21 +78,13 @@ impl Ui {
 
     pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a String> + 'a>, usize)) {
         let (lines, scroll_offset) = data;
-        self.screen_lines = 0;
 
         for line in lines {
-            self.screen_lines += self.calculate_line_height(line);
             wprintw(self.window, &format!("{}\n", line));
         }
 
-        self.screen_lines = min(self.screen_lines, MAX_SCROLLING_LINES);
-
+        self.update_screen_lines();
         self.scroll(scroll_offset as i32);
-    }
-
-    fn calculate_line_height(&self, line: &str) -> i32 {
-        let result = (line.width() as f32 / self.width as f32).ceil() as i32;
-        max(1, result)
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
@@ -135,5 +124,13 @@ impl Ui {
             }
         }
         Event::Other
+    }
+
+    fn update_screen_lines(&mut self) {
+        let mut current_x: i32 = 0;
+        let mut current_y: i32 = 0;
+        getyx(self.window, &mut current_y, &mut current_x);
+
+        self.screen_lines = current_y;
     }
 }

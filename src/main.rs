@@ -4,7 +4,6 @@ extern crate getopts;
 extern crate toml;
 extern crate rustc_serialize;
 extern crate regex;
-extern crate unicode_width;
 
 use std::env;
 
