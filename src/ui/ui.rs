@@ -1,9 +1,11 @@
-use std::cmp;
+use std::cmp::{min, max};
 
 use ncurses::*;
 use unicode_width::UnicodeWidthStr;
 
 use ui::menu::Menu;
+
+static MAX_SCROLLING_LINES: i32 = 10_000;
 
 pub enum Direction {
     Left,
@@ -20,7 +22,7 @@ pub enum Event {
 pub struct Ui {
     pub screen_lines: i32,
     menu: Menu,
-    content: WINDOW,
+    window: WINDOW,
     height: i32,
     width: i32
 }
@@ -44,7 +46,7 @@ impl Ui {
 
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
-            content: newpad(5000, COLS),
+            window: newpad(MAX_SCROLLING_LINES, COLS),
             screen_lines: 0,
             height: LINES,
             width: COLS
@@ -53,6 +55,7 @@ impl Ui {
 
     pub fn render(&self) {
         self.menu.render(COLOR_PAIR(1), COLOR_PAIR(2));
+        scrollok(self.window, true);
     }
 
     pub fn select_left_menu_item(&self) {
@@ -70,7 +73,7 @@ impl Ui {
 
     pub fn resize(&mut self) {
         getmaxyx(stdscr, &mut self.height, &mut self.width);
-        wresize(self.content, 5000, self.width);
+        wresize(self.window, MAX_SCROLLING_LINES, self.width);
         mvwin(self.menu.window, self.height - 1, 0);
         refresh();
         wrefresh(self.menu.window);
@@ -82,28 +85,30 @@ impl Ui {
 
         for line in lines {
             self.screen_lines += self.calculate_line_height(line);
-            wprintw(self.content, &format!("{}\n", line));
+            wprintw(self.window, &format!("{}\n", line));
         }
+
+        self.screen_lines = min(self.screen_lines, MAX_SCROLLING_LINES);
 
         self.scroll(scroll_offset as i32);
     }
 
     fn calculate_line_height(&self, line: &str) -> i32 {
         let result = (line.width() as f32 / self.width as f32).ceil() as i32;
-        cmp::max(1, result)
+        max(1, result)
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
         let offset =  self.screen_lines - self.height + 2 - reversed_offset;
-        prefresh(self.content, offset, 0, 0, 0, self.height - 2, self.width);
+        prefresh(self.window, offset, 0, 0, 0, self.height - 2, self.width);
     }
 
     pub fn refresh(&self) {
-        wrefresh(self.content);
+        wrefresh(self.window);
     }
 
     pub fn clear(&self) {
-        wclear(self.content);
+        wclear(self.window);
     }
 
     pub fn watch(&self) -> Event {
