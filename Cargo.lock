@@ -3,6 +3,7 @@ name = "flow"
 version = "0.1.0"
 dependencies = [
  "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncurses 5.80.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "notify 2.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.75 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -80,6 +81,11 @@ dependencies = [
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libc"

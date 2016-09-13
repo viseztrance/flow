@@ -1,15 +1,14 @@
 use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
-use std::collections::VecDeque;
 
-use settings::{Settings, SettingsValues};
+use settings::Settings;
 use ui::ui::{Ui, Event, Direction};
+use flow::line::LineCollection;
 use flow::buffer::{Buffer, BufferCollection, ScrollState};
 
 pub struct Flow {
     ui: Ui,
-    lines: VecDeque<String>,
-    settings_values: SettingsValues,
+    lines: LineCollection,
     buffer_collection: BufferCollection
 }
 
@@ -24,9 +23,8 @@ impl Flow {
 
         Flow {
             ui: Ui::new(&tab_names),
-            lines: VecDeque::new(),
-            buffer_collection: BufferCollection::from_filters(settings.config_file.filters),
-            settings_values: settings.values,
+            lines: LineCollection::new(settings.values.max_lines_count),
+            buffer_collection: BufferCollection::from_filters(settings.config_file.filters)
         }
     }
 
@@ -97,7 +95,7 @@ impl Flow {
             self.scroll(offset);
         }
 
-        self.clear_excess_lines();
+        self.lines.clear_excess();
     }
 
     fn reset_view(&mut self) {
@@ -105,12 +103,6 @@ impl Flow {
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
         self.ui.print(lines_iter);
         self.ui.scroll(self.current_buffer().borrow().reverse_index as i32);
-    }
-
-    fn clear_excess_lines(&mut self) {
-        while self.lines.len() > self.settings_values.max_lines_count {
-            self.lines.pop_front();
-        }
     }
 
     fn current_buffer(&self) -> &RefCell<Buffer> {

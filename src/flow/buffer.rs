@@ -1,5 +1,5 @@
 use std::cmp::{min, max};
-use std::collections::VecDeque;
+use flow::line::{Line, LineCollection};
 use std::cell::RefCell;
 
 use regex::Regex;
@@ -25,14 +25,16 @@ impl Buffer {
         }
     }
 
-    pub fn parse<'a>(&self, lines: &'a VecDeque<String>) -> (Box<Iterator<Item=&'a String> + 'a>, usize) {
+    pub fn parse<'a>(&self, lines: &'a LineCollection) -> (Box<Iterator<Item=&'a Line> + 'a>, usize) {
         let matcher = self.filter.matcher();
 
-        let parsed_lines = lines.iter().filter(move |line| matcher.is_match(line));
+        let parsed_lines = lines.entries.iter().filter(move |line| {
+            matcher.is_match(&line.content_without_ansi)
+        });
         (Box::new(parsed_lines), self.reverse_index)
     }
 
-    pub fn adjust_reverse_index(&mut self, value: i32, lines: &VecDeque<String>) -> ScrollState {
+    pub fn adjust_reverse_index(&mut self, value: i32, lines: &LineCollection) -> ScrollState {
         if value == DEFAULT_REVERSE_INDEX as i32 {
             return ScrollState::Unchanged;
         }

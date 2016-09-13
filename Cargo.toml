@@ -5,7 +5,11 @@ authors = ["Daniel Mircea <daniel@viseztrance.com>"]
 
 [[bin]]
 name = "flow"
-path = "src/main.rs"
+path = "src/bin/flow.rs"
+
+[lib]
+name = "flow"
+path = "src/lib.rs"
 
 [dependencies]
 notify = "2.6"
@@ -13,7 +17,8 @@ getopts = "0.2"
 toml = "0.2"
 rustc-serialize = "0.3"
 regex = "0.1"
+lazy_static = "0.2"
 
 [dependencies.ncurses]
-version = "5.80.0"
+version = "5.80"
 features = ["menu", "wide"]

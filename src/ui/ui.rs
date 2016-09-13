@@ -1,6 +1,8 @@
 use ncurses::*;
 
+use flow::line::Line;
 use ui::menu::Menu;
+use ui::ansi_converter::{AnsiLine, init_ansi_colors};
 
 static MAX_SCROLLING_LINES: i32 = 10_000;
 
@@ -41,6 +43,8 @@ impl Ui {
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_WHITE, COLOR_GREEN);
 
+        init_ansi_colors();
+
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
             window: newpad(MAX_SCROLLING_LINES, COLS),
@@ -76,11 +80,11 @@ impl Ui {
         wrefresh(self.menu.window);
     }
 
-    pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a String> + 'a>, usize)) {
+    pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a Line> + 'a>, usize)) {
         let (lines, scroll_offset) = data;
 
         for line in lines {
-            wprintw(self.window, &format!("{}\n", line));
+            line.print(self.window);
         }
 
         self.update_screen_lines();
@@ -88,7 +92,7 @@ impl Ui {
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset =  self.screen_lines - self.height + 2 - reversed_offset;
+        let offset =  self.screen_lines - self.height + 1 - reversed_offset;
         prefresh(self.window, offset, 0, 0, 0, self.height - 2, self.width);
     }
 
