@@ -1,38 +1,8 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
 use regex::Regex;
 use ncurses::*;
 
-use flow::line::Line;
-
-// A negative value is interpreted as the default (original) color.
-// For color pair generation, when unsigned it must also be different than the 8 colors already defined.
-static COLOR_DEFAULT: i16 = -9;
-
-pub fn init_ansi_colors() {
-    let colors = [
-        COLOR_BLACK,
-        COLOR_RED,
-        COLOR_GREEN,
-        COLOR_YELLOW,
-        COLOR_BLUE,
-        COLOR_MAGENTA,
-        COLOR_CYAN,
-        COLOR_WHITE,
-        COLOR_DEFAULT
-    ];
-
-    for foreground_color in colors.iter() {
-        for background_color in colors.iter() {
-            let id = build_color_id(foreground_color, background_color);
-            init_pair(id, *foreground_color, *background_color);
-        }
-    }
-}
-
-fn build_color_id(foreground_color: &i16, background_color: &i16) -> i16 {
-    100 + foreground_color.abs() * 10 + background_color.abs()
-}
+use ui::color::COLOR_DEFAULT;
 
 lazy_static! {
     static ref ANSI_TO_NCURSES_MAPPING: HashMap<&'static str, CursesStyle> = {
@@ -74,10 +44,18 @@ lazy_static! {
 
         codes
     };
-
-    static ref ACTIVE_VALUES: Mutex<(Vec<fn() -> u64>, i16, i16)> = Mutex::new((vec![], COLOR_DEFAULT, COLOR_DEFAULT));
 }
 
+pub enum CursesComponent {
+    Style(&'static CursesStyle),
+    Content(String)
+}
+
+pub enum CursesStyle {
+    Attribute(fn() -> u64, bool),
+    Color(Option<i16>, Option<i16>),
+    Reset
+}
 
 pub trait AnsiStr {
     fn has_ansi_escape_sequence<'a>(&'a self) -> bool;
@@ -121,85 +99,5 @@ impl AnsiStr for str {
         }
 
         components
-    }
-}
-
-pub trait AnsiLine {
-    fn print<'a>(&'a self, window: WINDOW);
-}
-
-impl AnsiLine for Line {
-    fn print(&self, window: WINDOW) {
-        match self.components {
-            Some(ref value) => {
-                for component in value {
-                    component.print(window);
-                }
-                waddch(window, '\n' as u64);
-            },
-            None => {
-                wprintw(window, &format!("{}\n", self.content_without_ansi));
-            }
-        };
-    }
-}
-
-#[derive(Debug)]
-pub enum CursesStyle {
-    Attribute(fn() -> u64, bool),
-    Color(Option<i16>, Option<i16>),
-    Reset
-}
-
-impl CursesStyle {
-    pub fn print(&self, window: WINDOW) {
-        let mut active_values = ACTIVE_VALUES.lock().unwrap();
-
-        match self {
-            &CursesStyle::Attribute(prop, active) => {
-                if active {
-                    active_values.0.push(prop);
-                    wattron(window, prop() as i32);
-                } else {
-                    wattroff(window, prop() as i32);
-                }
-            },
-            &CursesStyle::Color(foreground, background) => {
-                let current_foreground = foreground.unwrap_or(active_values.1);
-                let current_background = background.unwrap_or(active_values.2);
-
-                let id = build_color_id(&current_foreground, &current_background);
-                wattron(window, COLOR_PAIR(id) as i32);
-
-                active_values.1 = current_foreground;
-                active_values.2 = current_background;
-            },
-            &CursesStyle::Reset => {
-                for prop in active_values.0.drain(..) {
-                    wattroff(window, prop() as i32);
-                }
-                let id = build_color_id(&COLOR_DEFAULT, &COLOR_DEFAULT);
-                wattron(window, COLOR_PAIR(id) as i32);
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum CursesComponent {
-    Style(&'static CursesStyle),
-    Content(String)
-}
-
-impl CursesComponent {
-    pub fn print(&self, window: WINDOW) {
-        match self {
-            &CursesComponent::Style(value) => {
-                value.print(window);
-            },
-            &CursesComponent::Content(ref value) => {
-                wprintw(window, &value);
-            }
-        };
     }
 }

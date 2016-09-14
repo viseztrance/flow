@@ -2,7 +2,8 @@ use ncurses::*;
 
 use flow::line::Line;
 use ui::menu::Menu;
-use ui::ansi_converter::{AnsiLine, init_ansi_colors};
+use ui::printer::Print;
+use ui::color;
 
 static MAX_SCROLLING_LINES: i32 = 10_000;
 
@@ -42,8 +43,7 @@ impl Ui {
 
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_WHITE, COLOR_GREEN);
-
-        init_ansi_colors();
+        color::generate_pairs();
 
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
