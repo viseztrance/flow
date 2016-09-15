@@ -21,4 +21,4 @@ lazy_static = "0.2"
 
 [dependencies.ncurses]
 version = "5.80"
-features = ["menu", "wide"]
+features = ["menu", "wide", "panel"]

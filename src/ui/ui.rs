@@ -1,7 +1,8 @@
 use ncurses::*;
 
 use flow::line::Line;
-use ui::menu::Menu;
+use ui::key::{Key, read_key};
+use ui::navigation::navigation::{Navigation, State as NavigationState};
 use ui::content::Content;
 use ui::printer::Print;
 use ui::color;
@@ -14,22 +15,23 @@ pub enum Direction {
 }
 
 pub enum Event {
-    SelectMenuItem(Direction),
     ScrollContents(i32),
+    SelectMenuItem(Direction),
+    Navigation(NavigationState),
     Resize,
     Other
 }
 
 pub struct Ui {
     pub screen_lines: i32,
-    menu: Menu,
+    pub navigation: Navigation,
     pub content: Content,
     height: i32,
     width: i32
 }
 
 impl Ui {
-    pub fn new(menu_items: &Vec<String>) -> Ui {
+    pub fn new(menu_item_names: &Vec<String>) -> Ui {
         setlocale(LcCategory::all, ""); // Must be set *before* init
 
         initscr();
@@ -47,7 +49,7 @@ impl Ui {
         color::generate_pairs();
 
         Ui {
-            menu: Menu::new(LINES - 1, 0, menu_items),
+            navigation: Navigation::new(LINES - 1, 0, menu_item_names),
             content: Content::new(MAX_SCROLLING_LINES, COLS),
             screen_lines: 0,
             height: LINES,
@@ -56,29 +58,28 @@ impl Ui {
     }
 
     pub fn render(&self) {
-        self.menu.render(COLOR_PAIR(1), COLOR_PAIR(2));
+        self.navigation.render(COLOR_PAIR(1), COLOR_PAIR(2));
         self.content.render();
     }
 
     pub fn select_left_menu_item(&self) {
-        self.menu.select(REQ_LEFT_ITEM);
+        self.navigation.menu.select(REQ_LEFT_ITEM);
     }
 
     pub fn select_right_menu_item(&self) {
-        self.menu.select(REQ_RIGHT_ITEM);
+        self.navigation.menu.select(REQ_RIGHT_ITEM);
     }
 
     pub fn destroy(&self) {
-        self.menu.destroy();
+        self.navigation.destroy();
         endwin();
     }
 
     pub fn resize(&mut self) {
         getmaxyx(stdscr, &mut self.height, &mut self.width);
+
         self.content.resize(MAX_SCROLLING_LINES, self.width);
-        mvwin(self.menu.window, self.height - 1, 0);
-        refresh();
-        wrefresh(self.menu.window);
+        self.navigation.resize(0, self.height - 1);
     }
 
     pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a Line> + 'a>, usize)) {
@@ -98,28 +99,15 @@ impl Ui {
     }
 
     pub fn watch(&self) -> Event {
-        match getch() {
-            KEY_LEFT   => Event::SelectMenuItem(Direction::Left),
-            KEY_RIGHT  => Event::SelectMenuItem(Direction::Right),
-            KEY_UP     => Event::ScrollContents(1),
-            KEY_DOWN   => Event::ScrollContents(-1),
-            KEY_MOUSE  => self.read_mouse_event(),
-            KEY_RESIZE => Event::Resize,
+        match read_key() {
+            Key::Left   => Event::SelectMenuItem(Direction::Left),
+            Key::Right  => Event::SelectMenuItem(Direction::Right),
+            Key::Up | Key::MouseWheelUp => Event::ScrollContents(1),
+            Key::Down | Key::MouseWheelDown => Event::ScrollContents(-1),
+            Key::Resize => Event::Resize,
+            Key::Char('/') => Event::Navigation(NavigationState::Search),
+            Key::Char('m') => Event::Navigation(NavigationState::Menu),
             _ => Event::Other
         }
-    }
-
-    fn read_mouse_event(&self) -> Event {
-        let ref mut event = MEVENT {
-            id: 0, x: 0, y: 0, z: 0, bstate: 0
-        };
-        if getmouse(event) == OK {
-            if (event.bstate & BUTTON4_PRESSED as u64) != 0 {
-                return Event::ScrollContents(1)
-            } else if (event.bstate & BUTTON5_PRESSED as u64) != 0 {
-                return Event::ScrollContents(-1)
-            }
-        }
-        Event::Other
     }
 }

@@ -5,6 +5,7 @@ use settings::Settings;
 use ui::ui::{Ui, Event, Direction};
 use flow::line::LineCollection;
 use flow::buffer::{Buffer, BufferCollection, ScrollState};
+use ui::navigation::navigation::State as NavigationState;
 
 pub struct Flow {
     ui: Ui,
@@ -14,7 +15,7 @@ pub struct Flow {
 
 impl Flow {
     pub fn new(settings: Settings) -> Flow {
-        let tab_names = settings
+        let menu_item_names = settings
             .config_file
             .filters
             .iter()
@@ -22,7 +23,7 @@ impl Flow {
             .collect();
 
         Flow {
-            ui: Ui::new(&tab_names),
+            ui: Ui::new(&menu_item_names),
             lines: LineCollection::new(settings.values.max_lines_count),
             buffer_collection: BufferCollection::from_filters(settings.config_file.filters)
         }
@@ -41,6 +42,7 @@ impl Flow {
             match self.ui.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(value) => self.scroll(value),
+                Event::Navigation(state) => self.toggle_navigation(state),
                 Event::Resize => self.resize(),
                 _ => {
                     let mut mutex_guarded_lines = lines.lock().unwrap();
@@ -82,6 +84,10 @@ impl Flow {
         self.ui.resize();
         self.current_buffer().borrow_mut().reset_reverse_index();
         self.reset_view();
+    }
+
+    fn toggle_navigation(&mut self, state: NavigationState) {
+        self.ui.navigation.change_state(state);
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
