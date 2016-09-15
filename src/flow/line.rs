@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use ui::ansi_converter::{CursesComponent, AnsiStr};
+use ui::ansi_decoder::{ComponentCollection, AnsiStr};
 
 pub struct Line {
     pub content_without_ansi: String,
-    pub components: Option<Vec<CursesComponent>>
+    pub components: Option<ComponentCollection>
 }
 
 impl Line {
@@ -12,7 +12,7 @@ impl Line {
         let has_ansi = content.has_ansi_escape_sequence();
 
         let (content_without_ansi, components) = if has_ansi {
-            (content.strip_ansi(), Some(content.break_to_ncurses_components()))
+            (content.strip_ansi(), Some(content.to_components()))
         } else {
             (content, None)
         };

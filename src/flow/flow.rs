@@ -99,7 +99,7 @@ impl Flow {
     }
 
     fn reset_view(&mut self) {
-        self.ui.clear();
+        self.ui.content.clear();
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
         self.ui.print(lines_iter);
         self.ui.scroll(self.current_buffer().borrow().reverse_index as i32);

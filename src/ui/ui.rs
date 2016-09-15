@@ -2,6 +2,7 @@ use ncurses::*;
 
 use flow::line::Line;
 use ui::menu::Menu;
+use ui::content::Content;
 use ui::printer::Print;
 use ui::color;
 
@@ -22,7 +23,7 @@ pub enum Event {
 pub struct Ui {
     pub screen_lines: i32,
     menu: Menu,
-    window: WINDOW,
+    pub content: Content,
     height: i32,
     width: i32
 }
@@ -47,7 +48,7 @@ impl Ui {
 
         Ui {
             menu: Menu::new(LINES - 1, 0, menu_items),
-            window: newpad(MAX_SCROLLING_LINES, COLS),
+            content: Content::new(MAX_SCROLLING_LINES, COLS),
             screen_lines: 0,
             height: LINES,
             width: COLS
@@ -56,7 +57,7 @@ impl Ui {
 
     pub fn render(&self) {
         self.menu.render(COLOR_PAIR(1), COLOR_PAIR(2));
-        scrollok(self.window, true);
+        self.content.render();
     }
 
     pub fn select_left_menu_item(&self) {
@@ -74,7 +75,7 @@ impl Ui {
 
     pub fn resize(&mut self) {
         getmaxyx(stdscr, &mut self.height, &mut self.width);
-        wresize(self.window, MAX_SCROLLING_LINES, self.width);
+        self.content.resize(MAX_SCROLLING_LINES, self.width);
         mvwin(self.menu.window, self.height - 1, 0);
         refresh();
         wrefresh(self.menu.window);
@@ -84,24 +85,16 @@ impl Ui {
         let (lines, scroll_offset) = data;
 
         for line in lines {
-            line.print(self.window);
+            line.print(&self.content);
         }
 
-        self.update_screen_lines();
+        self.screen_lines = self.content.height();
         self.scroll(scroll_offset as i32);
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
         let offset =  self.screen_lines - self.height + 1 - reversed_offset;
-        prefresh(self.window, offset, 0, 0, 0, self.height - 2, self.width);
-    }
-
-    pub fn refresh(&self) {
-        wrefresh(self.window);
-    }
-
-    pub fn clear(&self) {
-        wclear(self.window);
+        prefresh(self.content.window, offset, 0, 0, 0, self.height - 2, self.width);
     }
 
     pub fn watch(&self) -> Event {
@@ -128,13 +121,5 @@ impl Ui {
             }
         }
         Event::Other
-    }
-
-    fn update_screen_lines(&mut self) {
-        let mut current_x: i32 = 0;
-        let mut current_y: i32 = 0;
-        getyx(self.window, &mut current_y, &mut current_x);
-
-        self.screen_lines = current_y;
     }
 }

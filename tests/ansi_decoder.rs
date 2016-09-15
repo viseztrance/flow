@@ -1,6 +1,6 @@
 extern crate flow;
 
-use flow::ui::ansi_converter::AnsiStr;
+use flow::ui::ansi_decoder::AnsiStr;
 
 #[test]
 fn detects_ansi_escape_sequence() {
@@ -38,10 +38,10 @@ fn strip_ansi_colors_from_fake_ansi_string() {
 #[test]
 fn breaks_text_into_ncurses_components() {
     let text_with_ansi = "[1m[36mHello[0m,[1m ncurses![0m";
-    let components = text_with_ansi.break_to_ncurses_components();
-    assert_eq!(8, components.len());
+    let components = text_with_ansi.to_components();
+    assert_eq!(8, components.items.len());
 
     let text_with_unknown_ansi = "[1m[99mHello[0m,[1m ncurses![0m";
-    let components = text_with_unknown_ansi.break_to_ncurses_components();
-    assert_eq!(7, components.len());
+    let components = text_with_unknown_ansi.to_components();
+    assert_eq!(7, components.items.len());
 }
