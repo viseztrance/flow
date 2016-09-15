@@ -15,13 +15,12 @@ impl Search {
         }
     }
 
-    pub fn render(&self, foreground: u64, background: u64) {
+    pub fn render(&self, _: u64, background: u64) {
         wprintw(self.window, &format!("Hello world"));
         refresh();
         wbkgd(self.window, background);
         wrefresh(self.window);
     }
-
 
     pub fn show(&self) {
         show_panel(self.panel);

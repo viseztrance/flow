@@ -5,7 +5,6 @@ use settings::Settings;
 use ui::ui::{Ui, Event, Direction};
 use flow::line::LineCollection;
 use flow::buffer::{Buffer, BufferCollection, ScrollState};
-use ui::navigation::navigation::State as NavigationState;
 
 pub struct Flow {
     ui: Ui,
@@ -42,7 +41,7 @@ impl Flow {
             match self.ui.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(value) => self.scroll(value),
-                Event::Navigation(state) => self.toggle_navigation(state),
+                Event::ChangeNavigationState(state) => self.ui.navigation.change_state(state),
                 Event::Resize => self.resize(),
                 _ => {
                     let mut mutex_guarded_lines = lines.lock().unwrap();
@@ -84,10 +83,6 @@ impl Flow {
         self.ui.resize();
         self.current_buffer().borrow_mut().reset_reverse_index();
         self.reset_view();
-    }
-
-    fn toggle_navigation(&mut self, state: NavigationState) {
-        self.ui.navigation.change_state(state);
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {

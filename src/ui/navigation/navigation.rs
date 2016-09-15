@@ -12,7 +12,7 @@ pub enum State {
 pub struct Navigation {
     pub menu: Menu,
     pub search: Search,
-    state: State
+    pub state: State
 }
 
 impl Navigation {

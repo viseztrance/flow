@@ -17,7 +17,7 @@ pub enum Direction {
 pub enum Event {
     ScrollContents(i32),
     SelectMenuItem(Direction),
-    Navigation(NavigationState),
+    ChangeNavigationState(NavigationState),
     Resize,
     Other
 }
@@ -100,14 +100,25 @@ impl Ui {
 
     pub fn watch(&self) -> Event {
         match read_key() {
-            Key::Left   => Event::SelectMenuItem(Direction::Left),
-            Key::Right  => Event::SelectMenuItem(Direction::Right),
-            Key::Up | Key::MouseWheelUp => Event::ScrollContents(1),
-            Key::Down | Key::MouseWheelDown => Event::ScrollContents(-1),
+            Key::Left => {
+                self.nav_event(Event::SelectMenuItem(Direction::Left), Event::Other)
+            },
+            Key::Right => {
+                self.nav_event(Event::SelectMenuItem(Direction::Right), Event::Other)
+            },
+            Key::Up => Event::ScrollContents(1),
+            Key::Down => Event::ScrollContents(-1),
             Key::Resize => Event::Resize,
-            Key::Char('/') => Event::Navigation(NavigationState::Search),
-            Key::Char('m') => Event::Navigation(NavigationState::Menu),
+            Key::Char('/') => Event::ChangeNavigationState(NavigationState::Search),
+            Key::Char('m') => Event::ChangeNavigationState(NavigationState::Menu),
             _ => Event::Other
+        }
+    }
+
+    fn nav_event(&self, menu_event: Event, search_event: Event) -> Event {
+        match self.navigation.state {
+            NavigationState::Menu => menu_event,
+            NavigationState::Search => search_event
         }
     }
 }
