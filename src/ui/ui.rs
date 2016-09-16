@@ -1,7 +1,7 @@
 use ncurses::*;
 
 use flow::line::Line;
-use ui::key::{Key, read_key};
+use ui::key::{Input, Key, Modifier, read_key};
 use ui::navigation::navigation::{Navigation, State as NavigationState};
 use ui::content::Content;
 use ui::printer::Print;
@@ -14,10 +14,18 @@ pub enum Direction {
     Right
 }
 
+pub enum SearchAction {
+    ToggleHighlightMode,
+    ToggleFilterMode,
+    FindNextMatch,
+    FindPreviousMatch,
+}
+
 pub enum Event {
     ScrollContents(i32),
     SelectMenuItem(Direction),
-    ChangeNavigationState(NavigationState),
+    Navigation(NavigationState),
+    Search(SearchAction),
     Resize,
     Other
 }
@@ -32,6 +40,7 @@ pub struct Ui {
 
 impl Ui {
     pub fn new(menu_item_names: &Vec<String>) -> Ui {
+        ::std::env::set_var("ESCDELAY", "25");
         setlocale(LcCategory::all, ""); // Must be set *before* init
 
         initscr();
@@ -45,7 +54,7 @@ impl Ui {
         keypad(stdscr, true);
 
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
-        init_pair(2, COLOR_WHITE, COLOR_GREEN);
+        init_pair(2, COLOR_BLACK, COLOR_YELLOW);
         color::generate_pairs();
 
         Ui {
@@ -100,17 +109,40 @@ impl Ui {
 
     pub fn watch(&self) -> Event {
         match read_key() {
-            Key::Left => {
-                self.nav_event(Event::SelectMenuItem(Direction::Left), Event::Other)
+            Input::Kb(Key::Left, None) if self.navigation.is_menu() => {
+                Event::SelectMenuItem(Direction::Left)
             },
-            Key::Right => {
-                self.nav_event(Event::SelectMenuItem(Direction::Right), Event::Other)
+            Input::Kb(Key::Right, None) if self.navigation.is_menu() => {
+                Event::SelectMenuItem(Direction::Right)
             },
-            Key::Up => Event::ScrollContents(1),
-            Key::Down => Event::ScrollContents(-1),
-            Key::Resize => Event::Resize,
-            Key::Char('/') => Event::ChangeNavigationState(NavigationState::Search),
-            Key::Char('m') => Event::ChangeNavigationState(NavigationState::Menu),
+            Input::Kb(Key::Up, None) => {
+                Event::ScrollContents(1)
+            },
+            Input::Kb(Key::Down, None) => {
+                Event::ScrollContents(-1)
+            },
+            Input::Kb(Key::Char('n'), Some(Modifier::Alt)) if self.navigation.is_search() => {
+                Event::Search(SearchAction::FindNextMatch)
+            },
+            Input::Kb(Key::Char('p'), Some(Modifier::Alt)) if self.navigation.is_search() => {
+                Event::Search(SearchAction::FindPreviousMatch)
+            },
+            Input::Kb(Key::Char('a'), Some(Modifier::Alt)) if self.navigation.is_search() => {
+                Event::Search(SearchAction::ToggleHighlightMode)
+            },
+            Input::Kb(Key::Char('f'), Some(Modifier::Alt)) if self.navigation.is_search() => {
+                Event::Search(SearchAction::ToggleFilterMode)
+            },
+            Input::Kb(Key::Char('/'), None) => {
+                self.nav_event(
+                    Event::Navigation(NavigationState::Search),
+                    Event::Navigation(NavigationState::Menu),
+                )
+            },
+            Input::Kb(Key::Escape, None) => {
+                Event::Navigation(NavigationState::Menu)
+            },
+            Input::Resize => Event::Resize,
             _ => Event::Other
         }
     }

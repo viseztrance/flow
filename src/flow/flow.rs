@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
 
 use settings::Settings;
-use ui::ui::{Ui, Event, Direction};
+use ui::ui::{Ui, Event, Direction, SearchAction};
 use flow::line::LineCollection;
 use flow::buffer::{Buffer, BufferCollection, ScrollState};
 
@@ -41,7 +41,8 @@ impl Flow {
             match self.ui.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(value) => self.scroll(value),
-                Event::ChangeNavigationState(state) => self.ui.navigation.change_state(state),
+                Event::Navigation(state) => self.ui.navigation.change_state(state),
+                Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
                 _ => {
                     let mut mutex_guarded_lines = lines.lock().unwrap();
@@ -76,6 +77,23 @@ impl Flow {
         if result == ScrollState::Changed {
             let offset = self.current_buffer().borrow().reverse_index as i32;
             self.ui.scroll(offset);
+        }
+    }
+
+    fn handle_search(&mut self, action: SearchAction) {
+        match action {
+            SearchAction::FindNextMatch => {
+                self.ui.navigation.search.find_next_match();
+            },
+            SearchAction::FindPreviousMatch => {
+                self.ui.navigation.search.find_previous_match();
+            },
+            SearchAction::ToggleHighlightMode => {
+                self.ui.navigation.search.toggle_highlight_mode();
+            },
+            SearchAction::ToggleFilterMode => {
+                self.ui.navigation.search.toggle_filter_mode();
+            }
         }
     }
 
