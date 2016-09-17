@@ -24,10 +24,10 @@ impl Navigation {
         }
     }
 
-    pub fn render(&self, foreground: u64, background: u64) {
-        self.search.render(foreground, background);
+    pub fn render(&self) {
+        self.search.render();
         self.search.hide();
-        self.menu.render(foreground, background);
+        self.menu.render();
     }
 
     pub fn is_menu(&self) -> bool {

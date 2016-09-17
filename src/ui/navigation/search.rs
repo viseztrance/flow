@@ -5,6 +5,7 @@ static OPTIONS_WIDTH: i32 = 45;
 pub struct Search {
     pub window: WINDOW,
     options: Options,
+    input: Input,
     panel: PANEL
 }
 
@@ -15,32 +16,38 @@ impl Search {
         Search {
             window: window,
             options: Options::new(window),
+            input: Input::new(window),
             panel: new_panel(window)
         }
     }
 
-    pub fn render(&self, _: u64, background: u64) {
-        wprintw(self.window, &format!("Hello world"));
-        refresh();
-        wbkgd(self.window, background);
-        self.options.render(background);
+    pub fn render(&self) {
+        wbkgd(self.window, COLOR_PAIR(1));
+        self.input.render();
+        self.options.render();
         wrefresh(self.window);
     }
 
+    pub fn process_input(&self, value: char) {
+        self.input.process(value);
+    }
+
     pub fn find_next_match(&self) {
-        // Highlight match
+        unimplemented!();
     }
 
     pub fn find_previous_match(&self) {
-        // Highlight match
+        unimplemented!();
     }
 
     pub fn toggle_highlight_mode(&mut self) {
         self.options.highlight_mode = !self.options.highlight_mode;
+        self.render();
     }
 
     pub fn toggle_filter_mode(&mut self) {
         self.options.filter_mode = !self.options.filter_mode;
+        self.render();
     }
 
     pub fn show(&self) {
@@ -49,6 +56,44 @@ impl Search {
 
     pub fn hide(&self) {
         hide_panel(self.panel);
+    }
+}
+
+struct Input {
+    window: WINDOW,
+    text: Option<String>
+}
+
+impl Input {
+    fn new(parent_window: WINDOW) -> Input {
+        Input {
+            window: derwin(parent_window, 1, COLS - OPTIONS_WIDTH, 0, 1),
+            text: None
+        }
+    }
+
+    fn render(&self) {
+        wclear(self.window);
+        wbkgd(self.window, COLOR_PAIR(1));
+        match self.text {
+            Some(ref value) => {
+                wattron(self.window, COLOR_PAIR(3) as i32);
+                wprintw(self.window, &value);
+            },
+            None => {
+                wprintw(self.window, "Type to search …");
+            }
+        }
+        wattron(self.window, COLOR_PAIR(1) as i32);
+    }
+
+    fn process(&self, value: char) {
+        // display cursor
+        // assume utf8 strings
+        // readline support
+        // empty strings becomes None
+        // render after each change
+        unimplemented!();
     }
 }
 
@@ -67,8 +112,9 @@ impl Options {
         }
     }
 
-    fn render(&self, background: u64) {
-        wbkgd(self.window, background);
+    fn render(&self) {
+        wclear(self.window);
+        wbkgd(self.window, COLOR_PAIR(1));
 
         self.print_navigation();
         self.print_highlight();
@@ -101,18 +147,18 @@ impl Options {
     }
 
     fn make_shortcut(&self, letter: char) {
-        wattron(self.window, A_BOLD() as i32);
+        wattron(self.window, A_UNDERLINE() as i32);
         waddch(self.window, letter as u64);
-        wattroff(self.window, A_BOLD() as i32);
+        wattroff(self.window, A_UNDERLINE() as i32);
     }
 
     fn mark_as_active<F>(&self, active: bool, callback: F) where F : Fn() {
         if active {
-            wattron(self.window, COLOR_PAIR(1) as i32);
+            wattron(self.window, COLOR_PAIR(2) as i32);
         }
         callback();
         if active {
-            wattroff(self.window, COLOR_PAIR(2) as i32);
+            wattroff(self.window, COLOR_PAIR(1) as i32);
         }
     }
 }

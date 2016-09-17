@@ -31,7 +31,7 @@ impl Menu {
         wrefresh(self.window);
     }
 
-    pub fn render(&self, foreground: u64, background: u64) {
+    pub fn render(&self) {
         keypad(self.window, true);
 
         set_menu_win(self.object, self.window);
@@ -39,13 +39,13 @@ impl Menu {
 
         menu_opts_off(self.object, O_SHOWDESC);
         set_menu_mark(self.object, "");
-        set_menu_fore(self.object, foreground);
-        set_menu_back(self.object, background);
+        set_menu_fore(self.object, COLOR_PAIR(1));
+        set_menu_back(self.object, COLOR_PAIR(2));
         set_menu_format(self.object, 1, self.items.len() as i32);
         post_menu(self.object);
 
         refresh();
-        wbkgd(self.window, background);
+        wbkgd(self.window, COLOR_PAIR(2));
         wrefresh(self.window);
     }
 

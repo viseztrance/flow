@@ -15,6 +15,7 @@ pub enum Direction {
 }
 
 pub enum SearchAction {
+    ReadInput(char),
     ToggleHighlightMode,
     ToggleFilterMode,
     FindNextMatch,
@@ -55,6 +56,7 @@ impl Ui {
 
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_BLACK, COLOR_YELLOW);
+        init_pair(3, COLOR_YELLOW, COLOR_BLUE);
         color::generate_pairs();
 
         Ui {
@@ -67,7 +69,7 @@ impl Ui {
     }
 
     pub fn render(&self) {
-        self.navigation.render(COLOR_PAIR(1), COLOR_PAIR(2));
+        self.navigation.render();
         self.content.render();
     }
 
@@ -133,24 +135,17 @@ impl Ui {
             Input::Kb(Key::Char('f'), Some(Modifier::Alt)) if self.navigation.is_search() => {
                 Event::Search(SearchAction::ToggleFilterMode)
             },
-            Input::Kb(Key::Char('/'), None) => {
-                self.nav_event(
-                    Event::Navigation(NavigationState::Search),
-                    Event::Navigation(NavigationState::Menu),
-                )
+            Input::Kb(Key::Char('/'), None) if self.navigation.is_menu() => {
+                Event::Navigation(NavigationState::Search)
             },
             Input::Kb(Key::Escape, None) => {
                 Event::Navigation(NavigationState::Menu)
             },
             Input::Resize => Event::Resize,
+            Input::Kb(Key::Char(value), None) if self.navigation.is_search() => {
+                Event::Search(SearchAction::ReadInput(value))
+            },
             _ => Event::Other
-        }
-    }
-
-    fn nav_event(&self, menu_event: Event, search_event: Event) -> Event {
-        match self.navigation.state {
-            NavigationState::Menu => menu_event,
-            NavigationState::Search => search_event
         }
     }
 }
