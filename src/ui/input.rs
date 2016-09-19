@@ -7,7 +7,6 @@ pub static KEY_LEFT_SEQ: [i32; 3] = [27, 91, 68];
 pub static KEY_RIGHT_SEQ: [i32; 3] = [27, 91, 67];
 pub static KEY_HOME_SEQ: [i32; 3] = [27, 91, 72];
 pub static KEY_END_SEQ: [i32; 3] = [27, 91, 70];
-pub static KEY_DELETE_SEQ: [i32; 3] = [27, 91, 51];
 pub static KEY_BACKSPACE_SEQ: [i32; 1] = [127];
 
 pub enum Key {
@@ -46,7 +45,7 @@ pub fn read_key() -> (Input, i32) {
         KEY_DOWN => Input::Kb(Key::Down, None),
         KEY_HOME => Input::Kb(Key::Home, None),
         KEY_END => Input::Kb(Key::End, None),
-        KEY_DL => Input::Kb(Key::Delete, None),
+        KEY_DC => Input::Kb(Key::Delete, None),
         KEY_BACKSPACE => Input::Kb(Key::Backspace, None),
         value => parse_key_code(value)
     };

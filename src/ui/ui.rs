@@ -2,35 +2,14 @@ use ncurses::*;
 
 use flow::line::Line;
 use ui::readline;
-use ui::input::*;
-use ui::navigation::navigation::{Navigation, State as NavigationState};
+use ui::input::read_key;
+use ui::event::{EventBuilder, Event};
+use ui::navigation::navigation::Navigation;
 use ui::content::Content;
 use ui::printer::Print;
 use ui::color;
 
 static MAX_SCROLLING_LINES: i32 = 10_000;
-
-pub enum Direction {
-    Left,
-    Right
-}
-
-pub enum SearchAction {
-    ReadInput(Vec<i32>),
-    ToggleHighlightMode,
-    ToggleFilterMode,
-    FindNextMatch,
-    FindPreviousMatch,
-}
-
-pub enum Event {
-    ScrollContents(i32),
-    SelectMenuItem(Direction),
-    Navigation(NavigationState),
-    Search(SearchAction),
-    Resize,
-    Other
-}
 
 pub struct Ui {
     pub screen_lines: i32,
@@ -116,96 +95,6 @@ impl Ui {
 
     pub fn watch(&self) -> Event {
         let (input, key) = read_key();
-
-        let mut result = self.get_global_event(&input);
-
-        if result.is_none() {
-            result = match self.navigation.state {
-                NavigationState::Menu => self.get_menu_event(&input),
-                NavigationState::Search => self.get_search_event(&input, key),
-            };
-        }
-        result.unwrap_or(Event::Other)
-    }
-
-    fn get_menu_event(&self, input: &Input) -> Option<Event> {
-        match *input {
-            Input::Kb(Key::Left, None) => {
-                Some(Event::SelectMenuItem(Direction::Left))
-            },
-            Input::Kb(Key::Right, None) => {
-                Some(Event::SelectMenuItem(Direction::Right))
-            },
-            Input::Kb(Key::Char('/'), None) => {
-                Some(Event::Navigation(NavigationState::Search))
-            },
-            _ => None
-        }
-    }
-
-    fn get_search_event(&self, input: &Input, key: i32) -> Option<Event> {
-        match *input {
-            Input::Kb(Key::Char('n'), Some(Modifier::Alt(_))) => {
-                Some(Event::Search(SearchAction::FindNextMatch))
-            },
-            Input::Kb(Key::Char('p'), Some(Modifier::Alt(_))) => {
-                Some(Event::Search(SearchAction::FindPreviousMatch))
-            },
-            Input::Kb(Key::Char('a'), Some(Modifier::Alt(_))) => {
-                Some(Event::Search(SearchAction::ToggleHighlightMode))
-            },
-            Input::Kb(Key::Char('f'), Some(Modifier::Alt(_))) => {
-                Some(Event::Search(SearchAction::ToggleFilterMode))
-            },
-            Input::Kb(Key::Escape, None) => {
-                Some(Event::Navigation(NavigationState::Menu))
-            },
-            _ => self.get_input_event(input, key)
-        }
-    }
-
-    fn get_global_event(&self, input: &Input) -> Option<Event> {
-        match *input {
-            Input::Kb(Key::Up, None) => {
-                Some(Event::ScrollContents(1))
-            },
-            Input::Kb(Key::Down, None) => {
-                Some(Event::ScrollContents(-1))
-            },
-            Input::Resize => Some(Event::Resize),
-            _ => None
-        }
-    }
-
-    fn get_input_event(&self, input: &Input, key: i32) -> Option<Event> {
-        match *input {
-            Input::Kb(Key::Left, None) => {
-                Some(Event::Search(SearchAction::ReadInput(KEY_LEFT_SEQ.to_vec())))
-            },
-            Input::Kb(Key::Right, None) => {
-                Some(Event::Search(SearchAction::ReadInput(KEY_RIGHT_SEQ.to_vec())))
-            },
-            Input::Kb(Key::Home, None) => {
-                Some(Event::Search(SearchAction::ReadInput(KEY_HOME_SEQ.to_vec())))
-            },
-            Input::Kb(Key::End, None) => {
-                Some(Event::Search(SearchAction::ReadInput(KEY_END_SEQ.to_vec())))
-            },
-            Input::Kb(Key::Delete, None) => {
-                Some(Event::Search(SearchAction::ReadInput(KEY_DELETE_SEQ.to_vec())))
-            },
-            Input::Kb(Key::Backspace, None) => {
-                Some(Event::Search(SearchAction::ReadInput(KEY_BACKSPACE_SEQ.to_vec())))
-            },
-            Input::Kb(_, ref modifier) => {
-                let mut keys = vec![key];
-                match *modifier {
-                    Some(Modifier::Alt(value)) => { keys.push(value) },
-                    _ => {}
-                };
-                Some(Event::Search(SearchAction::ReadInput(keys)))
-            },
-            _ => None
-        }
+        EventBuilder::new(input, key).construct(&self.navigation.state)
     }
 }

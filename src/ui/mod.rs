@@ -1,5 +1,6 @@
 pub mod ui;
 pub mod input;
+pub mod event;
 pub mod readline;
 pub mod content;
 pub mod navigation;

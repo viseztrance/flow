@@ -2,7 +2,8 @@ use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
 
 use settings::Settings;
-use ui::ui::{Ui, Event, Direction, SearchAction};
+use ui::ui::Ui;
+use ui::event::{Event, Direction, SearchAction};
 use flow::line::LineCollection;
 use flow::buffer::{Buffer, BufferCollection, ScrollState};
 
