@@ -1,11 +1,13 @@
 use ncurses::*;
 
+use ui::readline;
+
 static OPTIONS_WIDTH: i32 = 45;
 
 pub struct Search {
     pub window: WINDOW,
     options: Options,
-    input: Input,
+    pub input: Input,
     panel: PANEL
 }
 
@@ -28,16 +30,16 @@ impl Search {
         wrefresh(self.window);
     }
 
-    pub fn process_input(&self, value: char) {
-        self.input.process(value);
+    pub fn process_input(&self, keys: Vec<i32>) {
+        self.input.process(keys);
     }
 
     pub fn find_next_match(&self) {
-        unimplemented!();
+        // unimplemented!();
     }
 
     pub fn find_previous_match(&self) {
-        unimplemented!();
+        // unimplemented!();
     }
 
     pub fn toggle_highlight_mode(&mut self) {
@@ -52,15 +54,19 @@ impl Search {
 
     pub fn show(&self) {
         show_panel(self.panel);
+        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
+        readline::handle_redisplay();
     }
 
     pub fn hide(&self) {
         hide_panel(self.panel);
+
+        curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     }
 }
 
-struct Input {
-    window: WINDOW,
+pub struct Input {
+    pub window: WINDOW,
     text: Option<String>
 }
 
@@ -87,13 +93,17 @@ impl Input {
         wattron(self.window, COLOR_PAIR(1) as i32);
     }
 
-    fn process(&self, value: char) {
+    fn process(&self, keys: Vec<i32>) {
+        for key in keys {
+            readline::forward_input(key);
+        }
+
         // display cursor
         // assume utf8 strings
         // readline support
         // empty strings becomes None
         // render after each change
-        unimplemented!();
+        // unimplemented!();
     }
 }
 

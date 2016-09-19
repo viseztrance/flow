@@ -30,14 +30,6 @@ impl Navigation {
         self.menu.render();
     }
 
-    pub fn is_menu(&self) -> bool {
-        self.state == State::Menu
-    }
-
-    pub fn is_search(&self) -> bool {
-        self.state == State::Search
-    }
-
     pub fn destroy(&self) {
         self.menu.destroy();
     }

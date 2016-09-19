@@ -32,8 +32,6 @@ impl Menu {
     }
 
     pub fn render(&self) {
-        keypad(self.window, true);
-
         set_menu_win(self.object, self.window);
         set_menu_sub(self.object, derwin(self.window, 0, 0, 0, 0));
 

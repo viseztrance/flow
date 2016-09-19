@@ -82,8 +82,8 @@ impl Flow {
 
     fn handle_search(&mut self, action: SearchAction) {
         match action {
-            SearchAction::ReadInput(value) => {
-                self.ui.navigation.search.process_input(value);
+            SearchAction::ReadInput(keys) => {
+                self.ui.navigation.search.process_input(keys);
             },
             SearchAction::FindNextMatch => {
                 self.ui.navigation.search.find_next_match();

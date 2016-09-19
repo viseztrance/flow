@@ -1,5 +1,6 @@
 pub mod ui;
-pub mod key;
+pub mod input;
+pub mod readline;
 pub mod content;
 pub mod navigation;
 pub mod color;

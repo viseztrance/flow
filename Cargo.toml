@@ -12,6 +12,7 @@ name = "flow"
 path = "src/lib.rs"
 
 [dependencies]
+libc = "0.2"
 notify = "2.6"
 getopts = "0.2"
 toml = "0.2"
