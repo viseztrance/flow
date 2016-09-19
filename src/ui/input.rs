@@ -16,6 +16,7 @@ pub enum Key {
     Down,
     Home,
     End,
+    Tab,
     Backspace,
     Delete,
     Char(char),
@@ -47,6 +48,7 @@ pub fn read_key() -> (Input, i32) {
         KEY_END => Input::Kb(Key::End, None),
         KEY_DC => Input::Kb(Key::Delete, None),
         KEY_BACKSPACE => Input::Kb(Key::Backspace, None),
+        KEY_BTAB => Input::Kb(Key::Tab, None),
         value => parse_key_code(value)
     };
     (input, key)
@@ -66,7 +68,9 @@ fn parse_key_code(code: i32) -> Input {
     }
 
     match char::from_u32(pending as u32) {
-        Some(parsed_code) => Input::Kb(Key::Char(parsed_code), modifier),
+        Some(parsed_code) => {
+            Input::Kb(Key::Char(parsed_code), modifier)
+        },
         _ => Input::Kb(Key::Other, None)
     }
 }

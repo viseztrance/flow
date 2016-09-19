@@ -1,6 +1,8 @@
-use ncurses::*;
-use ui::color::COLOR_DEFAULT;
 use std::cell::RefCell;
+
+use ncurses::*;
+
+use ui::color::COLOR_DEFAULT;
 
 pub struct Content {
     pub window: WINDOW,

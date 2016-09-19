@@ -80,6 +80,7 @@ impl EventBuilder {
             Input::Kb(Key::Escape, None) => {
                 Some(Event::Navigation(NavigationState::Menu))
             },
+            Input::Kb(Key::Tab, None) => None,
             _ => self.create_input_event()
         }
     }

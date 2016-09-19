@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use ncurses::*;
 
 use ui::readline;
@@ -30,7 +32,7 @@ impl Search {
         wrefresh(self.window);
     }
 
-    pub fn process_input(&self, keys: Vec<i32>) {
+    pub fn process_input(&mut self, keys: Vec<i32>) {
         self.input.process(keys);
     }
 
@@ -53,43 +55,33 @@ impl Search {
     }
 
     pub fn show(&self) {
+        self.render();
         show_panel(self.panel);
-        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
-        readline::handle_redisplay();
     }
 
     pub fn hide(&self) {
         hide_panel(self.panel);
-
-        curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+        self.input.reset();
     }
 }
 
 pub struct Input {
     pub window: WINDOW,
-    text: Option<String>
+    text: RefCell<Option<String>>
 }
 
 impl Input {
     fn new(parent_window: WINDOW) -> Input {
         Input {
             window: derwin(parent_window, 1, COLS - OPTIONS_WIDTH, 0, 1),
-            text: None
+            text: RefCell::new(None)
         }
     }
 
     fn render(&self) {
         wclear(self.window);
         wbkgd(self.window, COLOR_PAIR(1));
-        match self.text {
-            Some(ref value) => {
-                wattron(self.window, COLOR_PAIR(3) as i32);
-                wprintw(self.window, &value);
-            },
-            None => {
-                wprintw(self.window, "Type to search …");
-            }
-        }
+        self.prepare_view();
         wattron(self.window, COLOR_PAIR(1) as i32);
     }
 
@@ -97,13 +89,26 @@ impl Input {
         for key in keys {
             readline::forward_input(key);
         }
+        *self.text.borrow_mut() = Some(readline::read_buffer().to_string());
+        self.prepare_view();
+    }
 
-        // display cursor
-        // assume utf8 strings
-        // readline support
-        // empty strings becomes None
-        // render after each change
-        // unimplemented!();
+    fn reset(&self) {
+        curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+        readline::update_buffer("");
+        *self.text.borrow_mut() = None;
+    }
+
+    fn prepare_view(&self) {
+        match *self.text.borrow_mut() {
+            Some(_) => {
+                curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
+            },
+            None => {
+                curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+                wprintw(self.window, "Type to search …");
+            }
+        }
     }
 }
 
@@ -124,6 +129,7 @@ impl Options {
 
     fn render(&self) {
         wclear(self.window);
+        readline::handle_redisplay();
         wbkgd(self.window, COLOR_PAIR(1));
 
         self.print_navigation();

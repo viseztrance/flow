@@ -50,6 +50,24 @@ pub fn terminate() {
     }
 }
 
+fn read_prompt<'a>() -> &'a str {
+    unsafe {
+        cstr_ptr_to_str(rl_display_prompt)
+    }
+}
+
+pub fn read_buffer<'a>() -> &'a str {
+    unsafe {
+        cstr_ptr_to_str(rl_line_buffer)
+    }
+}
+
+pub fn update_buffer(value: &str) {
+    unsafe {
+        rl_replace_line(value.as_ptr() as *mut i8, 0);
+    }
+}
+
 extern "C" fn getc(_: *mut FILE) -> i32 {
     unsafe {
         input_available = false;
@@ -70,10 +88,7 @@ pub extern "C" fn handle_redisplay() {
 
         werase(window);
 
-        let prompt = cstr_ptr_to_str(rl_display_prompt);
-        let buffer = cstr_ptr_to_str(rl_line_buffer);
-
-        mvwprintw(window, 0, 0, &format!("{} {}", prompt, buffer));
+        mvwprintw(window, 0, 0, &format!("{} {}", read_prompt(), read_buffer()));
 
         let cursor_position =
             cstr_ptr_to_str(rl_display_prompt).len() as i32 +
