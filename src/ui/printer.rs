@@ -46,9 +46,9 @@ impl Print for Style {
             &Style::Attribute(id, prop, active) => {
                 if active {
                     state.attributes.push((id, prop));
-                    wattron(content.window, prop() as i32);
+                    wattron(content.window, prop());
                 } else {
-                    wattroff(content.window, prop() as i32);
+                    wattroff(content.window, prop());
                     state.remove_attribute(id);
                 }
             },
@@ -66,7 +66,7 @@ impl Print for Style {
             },
             &Style::Reset => {
                 for (_, prop) in state.attributes.drain(..) {
-                    wattroff(content.window, prop() as i32);
+                    wattroff(content.window, prop());
                 }
 
                 wattron(content.window, ColorPair::default().to_attr());

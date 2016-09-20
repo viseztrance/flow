@@ -39,8 +39,8 @@ impl ColorPair {
         init_pair(self.calculate_id(), self.foreground, self.background);
     }
 
-    pub fn to_attr(&self) -> i32 {
-        COLOR_PAIR(self.calculate_id()) as i32
+    pub fn to_attr(&self) -> u64 {
+        COLOR_PAIR(self.calculate_id())
     }
 }
 

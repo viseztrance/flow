@@ -82,7 +82,7 @@ impl Input {
         wclear(self.window);
         wbkgd(self.window, COLOR_PAIR(1));
         self.prepare_view();
-        wattron(self.window, COLOR_PAIR(1) as i32);
+        wattron(self.window, COLOR_PAIR(1));
     }
 
     fn process(&self, keys: Vec<i32>) {
@@ -163,18 +163,18 @@ impl Options {
     }
 
     fn make_shortcut(&self, letter: char) {
-        wattron(self.window, A_UNDERLINE() as i32);
+        wattron(self.window, A_UNDERLINE());
         waddch(self.window, letter as u64);
-        wattroff(self.window, A_UNDERLINE() as i32);
+        wattroff(self.window, A_UNDERLINE());
     }
 
     fn mark_as_active<F>(&self, active: bool, callback: F) where F : Fn() {
         if active {
-            wattron(self.window, COLOR_PAIR(2) as i32);
+            wattron(self.window, COLOR_PAIR(2));
         }
         callback();
         if active {
-            wattroff(self.window, COLOR_PAIR(1) as i32);
+            wattroff(self.window, COLOR_PAIR(1));
         }
     }
 }
