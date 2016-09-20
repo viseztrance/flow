@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use settings::Settings;
+use utils::settings::Settings;
 use core::tail::Tail;
 use core::flow::Flow;
 

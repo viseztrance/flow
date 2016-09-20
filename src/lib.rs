@@ -9,8 +9,6 @@ extern crate rustc_serialize;
 extern crate regex;
 
 pub mod ext;
-pub mod settings;
-pub mod runner;
 pub mod utils;
 pub mod core;
 pub mod frontend;

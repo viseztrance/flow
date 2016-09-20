@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
 
-use settings::Settings;
+use utils::settings::Settings;
 use frontend::ui::Ui;
 use frontend::event::{Event, Direction, SearchAction};
 use core::line::LineCollection;
