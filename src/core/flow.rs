@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use utils::settings::Settings;
 use frontend::ui::Ui;
 use frontend::event::{Event, Direction, SearchAction};
+use frontend::search::QueryState;
 use core::line::LineCollection;
 use core::buffer::{Buffer, BufferCollection, ScrollState};
 
@@ -38,6 +39,7 @@ impl Flow {
     }
 
     pub fn process(&mut self, lines: Arc<Mutex<Vec<String>>>) {
+        // TODO: move things into a dispatcher object
         loop {
             match self.ui.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
@@ -84,7 +86,21 @@ impl Flow {
     fn handle_search(&mut self, action: SearchAction) {
         match action {
             SearchAction::ReadInput(keys) => {
-                self.ui.navigation.search.process_input(keys);
+                if self.ui.navigation.search.input_field.read(keys) == QueryState::Changed {
+                    let query = self.ui.navigation.search.build_query();
+                    match query.text {
+                        Some(_) => {
+                            let data = self.current_buffer().borrow().parse(&self.lines);
+                            let (lines, scroll_offset) = data;
+                            // Query should be a chain!
+                            // lines.chain();
+                        },
+                        None => {
+                            self.reset_scroll();
+                            self.reset_view();
+                        }
+                    }
+                }
             },
             SearchAction::FindNextMatch => {
                 self.ui.navigation.search.find_next_match();
@@ -103,7 +119,7 @@ impl Flow {
 
     fn resize(&mut self) {
         self.ui.resize();
-        self.current_buffer().borrow_mut().reset_reverse_index();
+        self.reset_scroll();
         self.reset_view();
     }
 
@@ -126,6 +142,10 @@ impl Flow {
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
         self.ui.print(lines_iter);
         self.ui.scroll(self.current_buffer().borrow().reverse_index as i32);
+    }
+
+    fn reset_scroll(&self) {
+        self.current_buffer().borrow_mut().reset_reverse_index();
     }
 
     fn current_buffer(&self) -> &RefCell<Buffer> {

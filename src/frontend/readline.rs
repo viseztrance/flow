@@ -1,7 +1,6 @@
 //
 // The following code is based on these implementations:
 // https://github.com/ulfalizer/readline-and-ncurses by Ulf Magnusson
-// https://github.com/postmodern/ncurses-readline-rs by Postmodern
 //
 
 use libc::{FILE, free, c_void, c_char};
@@ -50,45 +49,56 @@ pub fn terminate() {
     }
 }
 
-fn read_prompt<'a>() -> &'a str {
+pub fn read_buffer() -> Option<String> {
+    let buffer = unsafe { cstr_ptr_to_str(rl_line_buffer) };
+
+    if buffer.is_empty() {
+        None
+    } else {
+        Some(buffer.to_string())
+    }
+}
+
+pub fn read_prompt<'a>() -> &'a str {
     unsafe {
         cstr_ptr_to_str(rl_display_prompt)
     }
 }
 
-pub fn read_buffer<'a>() -> &'a str {
+pub fn reset() {
     unsafe {
-        cstr_ptr_to_str(rl_line_buffer)
-    }
-}
-
-pub fn update_buffer(value: &str) {
-    unsafe {
-        rl_replace_line(value.as_ptr() as *mut i8, 0);
+        rl_reset_line_state();
+        let offset = read_prompt().len() + 1;
+        wmove(command_window.unwrap(), 0, offset as i32);
     }
 }
 
 extern "C" fn getc(_: *mut FILE) -> i32 {
     unsafe {
         input_available = false;
-
         input
     }
 }
 
 extern "C" fn is_input_available() -> i32 {
-    unsafe {
-        input_available as i32
-    }
+    unsafe { input_available as i32 }
 }
 
 pub extern "C" fn handle_redisplay() {
     unsafe {
         let window = command_window.unwrap();
-
+        let prompt = read_prompt();
         werase(window);
+        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
 
-        mvwprintw(window, 0, 0, &format!("{} {}", read_prompt(), read_buffer()));
+        match read_buffer() {
+            Some(buffer) => {
+                wprintw(window, &format!("{} {}", prompt, buffer));
+            },
+            None => {
+                wprintw(window, prompt);
+            }
+        }
 
         let cursor_position =
             cstr_ptr_to_str(rl_display_prompt).len() as i32 +

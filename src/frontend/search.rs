@@ -6,10 +6,16 @@ use frontend::readline;
 
 static OPTIONS_WIDTH: i32 = 45;
 
+pub struct Query {
+    pub text: Option<String>,
+    pub highlight_mode: bool,
+    pub filter_mode: bool
+}
+
 pub struct Search {
     pub window: WINDOW,
     pub options: Options,
-    pub input: Input,
+    pub input_field: InputField,
     panel: PANEL
 }
 
@@ -20,20 +26,26 @@ impl Search {
         Search {
             window: window,
             options: Options::new(window),
-            input: Input::new(window),
+            input_field: InputField::new(window),
             panel: new_panel(window)
         }
     }
 
     pub fn render(&self) {
         wbkgd(self.window, COLOR_PAIR(1));
-        self.input.render();
+        self.input_field.render();
         self.options.render();
         wrefresh(self.window);
     }
 
-    pub fn process_input(&mut self, keys: Vec<i32>) {
-        self.input.process(keys);
+    pub fn build_query(&self) -> Query {
+        let text = self.input_field.text.borrow();
+
+        Query {
+            text: text.clone(),
+            highlight_mode: self.options.highlight_mode,
+            filter_mode: self.options.filter_mode
+        }
     }
 
     pub fn find_next_match(&self) {
@@ -56,26 +68,33 @@ impl Search {
 
     pub fn show(&self) {
         self.render();
+        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
         show_panel(self.panel);
+        self.input_field.reset();
     }
 
     pub fn hide(&self) {
+        curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
         hide_panel(self.panel);
-        self.input.reset();
     }
 }
+#[derive(PartialEq)]
+pub enum QueryState {
+    Changed,
+    Unchanged
+}
 
-pub struct Input {
+pub struct InputField {
     pub window: WINDOW,
     text: RefCell<Option<String>>
 }
 
-impl Input {
-    fn new(parent_window: WINDOW) -> Input {
+impl InputField {
+    fn new(parent_window: WINDOW) -> InputField {
         let window = derwin(parent_window, 1, COLS - OPTIONS_WIDTH, 0, 1);
         syncok(window, true);
 
-        Input {
+        InputField {
             window: window,
             text: RefCell::new(None)
         }
@@ -84,34 +103,28 @@ impl Input {
     fn render(&self) {
         wclear(self.window);
         wbkgd(self.window, COLOR_PAIR(1));
-        self.prepare_view();
         wattron(self.window, COLOR_PAIR(1));
     }
 
-    fn process(&self, keys: Vec<i32>) {
+    pub fn read(&self, keys: Vec<i32>) -> QueryState {
         for key in keys {
             readline::forward_input(key);
         }
-        *self.text.borrow_mut() = Some(readline::read_buffer().to_string());
-        self.prepare_view();
+
+        let pending_text = readline::read_buffer();
+        let mut current_text = self.text.borrow_mut();
+
+        if *current_text == pending_text {
+            QueryState::Unchanged
+        } else {
+            *current_text = pending_text;
+            QueryState::Changed
+        }
     }
 
     fn reset(&self) {
-        curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-        readline::update_buffer("");
+        readline::reset();
         *self.text.borrow_mut() = None;
-    }
-
-    fn prepare_view(&self) {
-        match *self.text.borrow_mut() {
-            Some(_) => {
-                curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
-            },
-            None => {
-                curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-                wprintw(self.window, "Type to search …");
-            }
-        }
     }
 }
 

@@ -44,8 +44,8 @@ impl Navigation {
 
     pub fn resize(&self, position_x: i32, position_y: i32) {
         mvwin(self.search.window, position_y, position_x);
-        mvwin(self.search.input.window, position_y, position_x + 1);
-        wrefresh(self.search.input.window);
+        mvwin(self.search.input_field.window, position_y, position_x + 1);
+        wrefresh(self.search.input_field.window);
         mvwin(self.menu.window, position_y, position_x);
 
         self.render();

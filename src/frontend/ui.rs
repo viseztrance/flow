@@ -50,7 +50,7 @@ impl Ui {
     }
 
     pub fn render(&self) {
-        readline::render("Search:", self.navigation.search.input.window);
+        readline::render("Search:", self.navigation.search.input_field.window);
 
         self.navigation.render();
         self.content.render();
