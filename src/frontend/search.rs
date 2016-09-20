@@ -8,7 +8,7 @@ static OPTIONS_WIDTH: i32 = 45;
 
 pub struct Search {
     pub window: WINDOW,
-    options: Options,
+    pub options: Options,
     pub input: Input,
     panel: PANEL
 }
@@ -72,8 +72,11 @@ pub struct Input {
 
 impl Input {
     fn new(parent_window: WINDOW) -> Input {
+        let window = derwin(parent_window, 1, COLS - OPTIONS_WIDTH, 0, 1);
+        syncok(window, true);
+
         Input {
-            window: derwin(parent_window, 1, COLS - OPTIONS_WIDTH, 0, 1),
+            window: window,
             text: RefCell::new(None)
         }
     }
@@ -112,8 +115,8 @@ impl Input {
     }
 }
 
-struct Options {
-    window: WINDOW,
+pub struct Options {
+    pub window: WINDOW,
     highlight_mode: bool,
     filter_mode: bool
 }
@@ -157,8 +160,9 @@ impl Options {
     fn print_filter(&self) {
         wprintw(self.window, " / ");
         self.mark_as_active(self.filter_mode, || {
-            self.make_shortcut('F');
-            wprintw(self.window, "ilter Mode");
+            wprintw(self.window, "Filter ");
+            self.make_shortcut('M');
+            wprintw(self.window, "ode");
         });
     }
 

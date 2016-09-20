@@ -21,16 +21,13 @@ impl Content {
         scrollok(self.window, true);
     }
 
-    pub fn refresh(&self) {
-        wrefresh(self.window);
-    }
-
     pub fn clear(&self) {
         wclear(self.window);
     }
 
     pub fn resize(&self, width: i32, height: i32) {
         wresize(self.window, width, height);
+        wrefresh(self.window);
     }
 
     pub fn height(&self) -> i32 {

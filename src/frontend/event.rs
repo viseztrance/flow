@@ -74,7 +74,7 @@ impl EventBuilder {
             Input::Kb(Key::Char('a'), Some(Modifier::Alt(_))) => {
                 Some(Event::Search(SearchAction::ToggleHighlightMode))
             },
-            Input::Kb(Key::Char('f'), Some(Modifier::Alt(_))) => {
+            Input::Kb(Key::Char('m'), Some(Modifier::Alt(_))) => {
                 Some(Event::Search(SearchAction::ToggleFilterMode))
             },
             Input::Kb(Key::Escape, None) => {

@@ -26,8 +26,8 @@ impl Navigation {
 
     pub fn render(&self) {
         self.search.render();
-        self.search.hide();
         self.menu.render();
+        self.handle_visibility();
     }
 
     pub fn destroy(&self) {
@@ -39,7 +39,19 @@ impl Navigation {
             return;
         }
         self.state = new_state;
+        self.handle_visibility();
+    }
 
+    pub fn resize(&self, position_x: i32, position_y: i32) {
+        mvwin(self.search.window, position_y, position_x);
+        mvwin(self.search.input.window, position_y, position_x + 1);
+        wrefresh(self.search.input.window);
+        mvwin(self.menu.window, position_y, position_x);
+
+        self.render();
+    }
+
+    fn handle_visibility(&self) {
         match self.state {
             State::Menu => {
                 self.search.hide();
@@ -53,11 +65,5 @@ impl Navigation {
 
         update_panels();
         doupdate();
-    }
-
-    pub fn resize(&self, position_x: i32, position_y: i32) {
-        mvwin(self.menu.window, position_y, position_x);
-        refresh();
-        wrefresh(self.menu.window);
     }
 }
