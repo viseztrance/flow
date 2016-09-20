@@ -2,8 +2,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use settings::Settings;
-use flow::tail::Tail;
-use flow::flow::Flow;
+use core::tail::Tail;
+use core::flow::Flow;
 
 pub fn execute(settings: Settings) {
     let mut tail = Tail::new(settings.values.path_to_target_file.clone());

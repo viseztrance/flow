@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use ncurses::*;
 
-use ui::readline;
+use frontend::readline;
 
 static OPTIONS_WIDTH: i32 = 45;
 
@@ -138,27 +138,27 @@ impl Options {
     }
 
     fn print_navigation(&self) {
-        wprintw(self.window, &format!(" / "));
+        wprintw(self.window, " / ");
         self.make_shortcut('N');
-        wprintw(self.window, &format!("ext / "));
+        wprintw(self.window, "ext / ");
         self.make_shortcut('P');
-        wprintw(self.window, &format!("rev"));
+        wprintw(self.window, "rev");
     }
 
     fn print_highlight(&self) {
-        wprintw(self.window, &format!(" / "));
+        wprintw(self.window, " / ");
         self.mark_as_active(self.highlight_mode, || {
-            wprintw(self.window, &format!("Highlight "));
+            wprintw(self.window, "Highlight ");
             self.make_shortcut('A');
-            wprintw(self.window, &format!("ll"));
+            wprintw(self.window, "ll");
         });
     }
 
     fn print_filter(&self) {
-        wprintw(self.window, &format!(" / "));
+        wprintw(self.window, " / ");
         self.mark_as_active(self.filter_mode, || {
             self.make_shortcut('F');
-            wprintw(self.window, &format!("ilter Mode"));
+            wprintw(self.window, "ilter Mode");
         });
     }
 

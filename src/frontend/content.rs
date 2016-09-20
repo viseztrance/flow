@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use ncurses::*;
 
-use ui::color::COLOR_DEFAULT;
+use frontend::color::COLOR_DEFAULT;
 
 pub struct Content {
     pub window: WINDOW,

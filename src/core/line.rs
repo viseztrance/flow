@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use ui::ansi_decoder::{ComponentCollection, AnsiStr};
+use utils::ansi_decoder::{ComponentCollection, AnsiStr};
 
 pub struct Line {
     pub content_without_ansi: String,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use regex::Regex;
 use ncurses::*;
 
-use ui::color::COLOR_DEFAULT;
+use frontend::color::COLOR_DEFAULT;
 
 lazy_static! {
     static ref ANSI_TO_NCURSES_MAPPING: HashMap<&'static str, Style> = {
@@ -97,16 +97,16 @@ pub enum Style {
 }
 
 pub trait AnsiStr {
-    fn has_ansi_escape_sequence<'a>(&'a self) -> bool;
+    fn has_ansi_escape_sequence(&self) -> bool;
 
-    fn strip_ansi<'a>(&'a self) -> String;
+    fn strip_ansi(&self) -> String;
 
-    fn to_components<'a>(&'a self) -> ComponentCollection;
+    fn to_components(&self) -> ComponentCollection;
 }
 
 impl AnsiStr for str {
     fn has_ansi_escape_sequence(&self) -> bool {
-        self.contains("")
+        self.contains('')
     }
 
     fn strip_ansi(&self) -> String {

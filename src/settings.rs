@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use getopts::{Options, Matches};
 use toml;
 
-use flow::buffer::BufferFilter;
+use core::buffer::BufferFilter;
 
 static DEFAULT_LAST_LINES_SHOWN: usize = 10;
 static DEFAULT_MAX_LINES_STORED: usize = 5000;

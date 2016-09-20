@@ -1,5 +1,5 @@
 use std::cmp::{min, max};
-use flow::line::{Line, LineCollection};
+use core::line::{Line, LineCollection};
 use std::cell::RefCell;
 
 use regex::Regex;

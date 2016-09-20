@@ -1,6 +1,6 @@
 extern crate flow;
 
-use flow::ui::ansi_decoder::AnsiStr;
+use flow::utils::ansi_decoder::AnsiStr;
 
 #[test]
 fn detects_ansi_escape_sequence() {

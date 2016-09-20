@@ -57,8 +57,8 @@ pub fn generate_pairs() {
         COLOR_DEFAULT
     ];
 
-    for foreground in colors.iter() {
-        for background in colors.iter() {
+    for foreground in &colors {
+        for background in &colors {
             ColorPair::new(*foreground, *background).init();
         }
     }

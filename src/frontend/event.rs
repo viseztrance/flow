@@ -1,5 +1,5 @@
-use ui::input::*;
-use ui::navigation::navigation::State as NavigationState;
+use frontend::input::*;
+use frontend::navigation::State as NavigationState;
 
 pub enum Direction {
     Left,

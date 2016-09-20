@@ -2,10 +2,10 @@ use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
 
 use settings::Settings;
-use ui::ui::Ui;
-use ui::event::{Event, Direction, SearchAction};
-use flow::line::LineCollection;
-use flow::buffer::{Buffer, BufferCollection, ScrollState};
+use frontend::ui::Ui;
+use frontend::event::{Event, Direction, SearchAction};
+use core::line::LineCollection;
+use core::buffer::{Buffer, BufferCollection, ScrollState};
 
 pub struct Flow {
     ui: Ui,

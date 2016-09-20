@@ -72,7 +72,7 @@ extern "C" fn getc(_: *mut FILE) -> i32 {
     unsafe {
         input_available = false;
 
-        return input;
+        input
     }
 }
 
@@ -108,7 +108,7 @@ extern "C" fn handle_input(line_ptr: *mut c_char) {
     let line = unsafe { cstr_ptr_to_str(line_ptr) };
     handle_redisplay();
 
-    if line.len() > 0 {
+    if !line.is_empty() {
         // add history
         handle_redisplay();
     }

@@ -1,12 +1,12 @@
 use ncurses::*;
 
-use flow::line::Line;
-use ui::ansi_decoder::{Component, Style};
-use ui::color::ColorPair;
-use ui::content::Content;
+use core::line::Line;
+use utils::ansi_decoder::{Component, Style};
+use frontend::color::ColorPair;
+use frontend::content::Content;
 
 pub trait Print {
-    fn print<'a>(&'a self, content: &Content);
+    fn print(&self, content: &Content);
 }
 
 impl Print for Line {
@@ -27,12 +27,12 @@ impl Print for Line {
 
 impl Print for Component {
     fn print(&self, content: &Content) {
-        match self {
-            &Component::Style(value) => {
+        match *self {
+            Component::Style(value) => {
                 value.print(content);
             },
-            &Component::Content(ref value) => {
-                wprintw(content.window, &value);
+            Component::Content(ref value) => {
+                wprintw(content.window, value);
             }
         };
     }
@@ -42,8 +42,8 @@ impl Print for Style {
     fn print(&self, content: &Content) {
         let mut state = content.state.borrow_mut();
 
-        match self {
-            &Style::Attribute(id, prop, active) => {
+        match *self {
+            Style::Attribute(id, prop, active) => {
                 if active {
                     state.attributes.push((id, prop));
                     wattron(content.window, prop());
@@ -52,7 +52,7 @@ impl Print for Style {
                     state.remove_attribute(id);
                 }
             },
-            &Style::Color(foreground, background) => {
+            Style::Color(foreground, background) => {
                 let color = ColorPair::from_options(
                     foreground,
                     background,
@@ -64,7 +64,7 @@ impl Print for Style {
                 state.foreground = color.foreground;
                 state.background = color.background;
             },
-            &Style::Reset => {
+            Style::Reset => {
                 for (_, prop) in state.attributes.drain(..) {
                     wattroff(content.window, prop());
                 }

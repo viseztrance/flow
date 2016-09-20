@@ -58,8 +58,8 @@ impl Menu {
     pub fn destroy(&self) {
         unpost_menu(self.object);
 
-        for &item in self.items.iter() {
-            free_item(item);
+        for item in &self.items {
+            free_item(*item);
         }
 
         free_menu(self.object);

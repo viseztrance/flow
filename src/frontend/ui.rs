@@ -1,13 +1,13 @@
 use ncurses::*;
 
-use flow::line::Line;
-use ui::readline;
-use ui::input::read_key;
-use ui::event::{EventBuilder, Event};
-use ui::navigation::navigation::Navigation;
-use ui::content::Content;
-use ui::printer::Print;
-use ui::color;
+use core::line::Line;
+use frontend::readline;
+use frontend::input::read_key;
+use frontend::event::{EventBuilder, Event};
+use frontend::navigation::Navigation;
+use frontend::content::Content;
+use frontend::printer::Print;
+use frontend::color;
 
 static MAX_SCROLLING_LINES: i32 = 10_000;
 
