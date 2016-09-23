@@ -20,6 +20,8 @@ pub fn init() {
         rl_catch_sigwinch = 0;
         rl_deprep_term_function = None;
         rl_prep_term_function = None;
+        rl_unbind_key('\r' as i32);
+        rl_unbind_key('\n' as i32);
 
         rl_getc_function = Some(getc);
         rl_input_available_hook = Some(is_input_available);
@@ -49,13 +51,9 @@ pub fn terminate() {
     }
 }
 
-pub fn read_buffer() -> Option<String> {
-    let buffer = unsafe { cstr_ptr_to_str(rl_line_buffer) };
-
-    if buffer.is_empty() {
-        None
-    } else {
-        Some(buffer.to_string())
+pub fn read_buffer<'a>() -> &'a str {
+    unsafe {
+        cstr_ptr_to_str(rl_line_buffer)
     }
 }
 
@@ -88,16 +86,15 @@ pub extern "C" fn handle_redisplay() {
     unsafe {
         let window = command_window.unwrap();
         let prompt = read_prompt();
+        let buffer = read_buffer();
         werase(window);
         curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
 
-        match read_buffer() {
-            Some(buffer) => {
-                wprintw(window, &format!("{} {}", prompt, buffer));
-            },
-            None => {
-                wprintw(window, prompt);
-            }
+
+        if buffer.is_empty() {
+            wprintw(window, prompt);
+        } else {
+            wprintw(window, &format!("{} {}", prompt, buffer));
         }
 
         let cursor_position =

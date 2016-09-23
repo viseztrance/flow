@@ -18,7 +18,7 @@ impl Content {
     }
 
     pub fn render(&self) {
-        scrollok(self.window, true);
+        // scrollok(self.window, true);
     }
 
     pub fn clear(&self) {
@@ -36,6 +36,12 @@ impl Content {
         getyx(self.window, &mut current_y, &mut current_x);
 
         current_y
+    }
+
+    pub fn calculate_height_change<F>(&self, callback: F) -> i32 where F : Fn() {
+        let initial_height = self.height();
+        callback();
+        self.height() - initial_height
     }
 }
 

@@ -2,21 +2,21 @@ use ncurses::*;
 
 use core::line::Line;
 use frontend::readline;
+use frontend::color;
 use frontend::input::read_key;
 use frontend::event::{EventBuilder, Event};
 use frontend::navigation::Navigation;
+use frontend::plane::Plane;
 use frontend::content::Content;
 use frontend::printer::Print;
-use frontend::color;
+use frontend::search::Query;
 
-static MAX_SCROLLING_LINES: i32 = 10_000;
+static MAX_SCROLLING_LINES: i32 = 15_000;
 
 pub struct Ui {
-    pub screen_lines: i32,
+    pub plane: Plane,
     pub navigation: Navigation,
-    pub content: Content,
-    height: i32,
-    width: i32
+    pub content: Content
 }
 
 impl Ui {
@@ -39,13 +39,12 @@ impl Ui {
         init_pair(2, COLOR_BLACK, COLOR_YELLOW);
         init_pair(3, COLOR_YELLOW, COLOR_BLUE);
         color::generate_pairs();
+        let plane = Plane::new();
 
         Ui {
-            navigation: Navigation::new(LINES - 1, 0, menu_item_names),
-            content: Content::new(MAX_SCROLLING_LINES, COLS),
-            screen_lines: 0,
-            height: LINES,
-            width: COLS
+            navigation: Navigation::new(plane.height - 1, 0, menu_item_names),
+            content: Content::new(MAX_SCROLLING_LINES, plane.width),
+            plane: plane,
         }
     }
 
@@ -71,30 +70,51 @@ impl Ui {
     }
 
     pub fn resize(&mut self) {
-        getmaxyx(stdscr, &mut self.height, &mut self.width);
+        self.plane.resize();
 
-        self.content.resize(MAX_SCROLLING_LINES, self.width);
-        self.navigation.resize(0, self.height - 1);
+        self.content.resize(MAX_SCROLLING_LINES, self.plane.width);
+        self.navigation.resize(0, self.plane.height - 1);
     }
 
-    pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a Line> + 'a>, usize)) {
+    pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a Line> + 'a>, usize), query_opt: Option<Query>) {
+        self.plane.lines.clear();
+
         let (lines, scroll_offset) = data;
+        let mut current_height = 0;
+
 
         for line in lines {
-            line.print(&self.content);
+            let current_line_height = self.content.calculate_height_change(||{
+                line.print(&self.content);
+            });
+
+            if let Some(ref query) = query_opt {
+                self.highlight_matches(line, query, current_height, current_line_height);
+            }
+            current_height += current_line_height;
+            self.plane.lines.push(current_line_height);
         }
 
-        self.screen_lines = self.content.height();
         self.scroll(scroll_offset as i32);
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset =  self.screen_lines - self.height + 1 - reversed_offset;
-        prefresh(self.content.window, offset, 0, 0, 0, self.height - 2, self.width);
+        let offset =  self.plane.virtual_height() - self.plane.height + 1 - reversed_offset;
+        prefresh(self.content.window, offset, 0, 0, 0, self.plane.height - 2, self.plane.width);
     }
 
     pub fn watch(&self) -> Event {
         let (input, key) = read_key();
         EventBuilder::new(input, key).construct(&self.navigation.state)
+    }
+
+    pub fn highlight_matches(&self, line: &Line, query: &Query, total_height: i32, line_height: i32) {
+        let matches: Vec<_> = line.content_without_ansi.match_indices(&query.text).collect();
+        for (i, value) in matches {
+            wattron(self.content.window, A_STANDOUT());
+            mvwprintw(self.content.window, total_height, i as i32, value);
+            wattroff(self.content.window, A_STANDOUT());
+        }
+        mvwprintw(self.content.window, total_height + line_height, 0, "");
     }
 }

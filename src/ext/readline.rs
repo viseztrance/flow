@@ -23,6 +23,7 @@ extern "C" {
     pub static mut rl_redisplay_function: RlVoidfuncT;
 
     pub fn rl_bind_key(key: c_int, callback: RlCommandFuncT) -> c_int;
+    pub fn rl_unbind_key(key: c_int) -> c_int;
     pub fn rl_callback_read_char();
     pub fn rl_insert(_: c_int, _: c_int) -> c_int;
     pub fn rl_reset_line_state();

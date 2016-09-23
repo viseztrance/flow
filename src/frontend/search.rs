@@ -7,7 +7,7 @@ use frontend::readline;
 static OPTIONS_WIDTH: i32 = 45;
 
 pub struct Query {
-    pub text: Option<String>,
+    pub text: String,
     pub highlight_mode: bool,
     pub filter_mode: bool
 }
@@ -39,13 +39,12 @@ impl Search {
     }
 
     pub fn build_query(&self) -> Query {
-        let text = self.input_field.text.borrow();
-
-        Query {
-            text: text.clone(),
+        let query = Query {
+            text: self.input_field.text.borrow().clone(),
             highlight_mode: self.options.highlight_mode,
             filter_mode: self.options.filter_mode
-        }
+        };
+        query
     }
 
     pub fn find_next_match(&self) {
@@ -86,7 +85,7 @@ pub enum QueryState {
 
 pub struct InputField {
     pub window: WINDOW,
-    text: RefCell<Option<String>>
+    text: RefCell<String>
 }
 
 impl InputField {
@@ -96,7 +95,7 @@ impl InputField {
 
         InputField {
             window: window,
-            text: RefCell::new(None)
+            text: RefCell::new(String::new())
         }
     }
 
@@ -111,7 +110,7 @@ impl InputField {
             readline::forward_input(key);
         }
 
-        let pending_text = readline::read_buffer();
+        let pending_text = readline::read_buffer().to_string();
         let mut current_text = self.text.borrow_mut();
 
         if *current_text == pending_text {
@@ -124,7 +123,7 @@ impl InputField {
 
     fn reset(&self) {
         readline::reset();
-        *self.text.borrow_mut() = None;
+        *self.text.borrow_mut() = String::new();
     }
 }
 

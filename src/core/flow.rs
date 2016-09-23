@@ -88,18 +88,8 @@ impl Flow {
             SearchAction::ReadInput(keys) => {
                 if self.ui.navigation.search.input_field.read(keys) == QueryState::Changed {
                     let query = self.ui.navigation.search.build_query();
-                    match query.text {
-                        Some(_) => {
-                            let data = self.current_buffer().borrow().parse(&self.lines);
-                            let (lines, scroll_offset) = data;
-                            // Query should be a chain!
-                            // lines.chain();
-                        },
-                        None => {
-                            self.reset_scroll();
-                            self.reset_view();
-                        }
-                    }
+                    let lines_iter = self.current_buffer().borrow().parse(&self.lines);
+                    self.ui.print(lines_iter, Some(query));
                 }
             },
             SearchAction::FindNextMatch => {
@@ -124,13 +114,13 @@ impl Flow {
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
-        let initial_screen_lines = self.ui.screen_lines;
+        let initial_height = self.ui.plane.virtual_height();
 
         self.lines.extend(pending_lines);
 
         self.reset_view();
         if self.current_buffer().borrow().is_scrolled() {
-            let offset = self.ui.screen_lines - initial_screen_lines;
+            let offset = self.ui.plane.virtual_height() - initial_height;
             self.scroll(offset);
         }
 
@@ -140,7 +130,7 @@ impl Flow {
     fn reset_view(&mut self) {
         self.ui.content.clear();
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-        self.ui.print(lines_iter);
+        self.ui.print(lines_iter, None);
         self.ui.scroll(self.current_buffer().borrow().reverse_index as i32);
     }
 
