@@ -20,9 +20,11 @@ pub fn init() {
         rl_catch_sigwinch = 0;
         rl_deprep_term_function = None;
         rl_prep_term_function = None;
-        rl_unbind_key('\r' as i32);
-        rl_unbind_key('\n' as i32);
 
+        rl_unbind_key('\r' as i32); // Unbind Enter
+        rl_unbind_key('\n' as i32); // Unbind Control + J
+        rl_unbind_key('\t' as i32); // Unbind Tab
+        rl_unbind_key('L' as i32 - '@' as i32); // Unbind Control + L
         rl_getc_function = Some(getc);
         rl_input_available_hook = Some(is_input_available);
         rl_redisplay_function = Some(handle_redisplay);
