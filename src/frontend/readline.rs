@@ -6,6 +6,8 @@
 use libc::{FILE, free, c_void, c_char};
 use std::ffi::CStr;
 use ncurses::*;
+use unicode_width::UnicodeWidthStr;
+use unicode_segmentation::UnicodeSegmentation;
 
 use ext::readline::*;
 
@@ -89,9 +91,8 @@ pub extern "C" fn handle_redisplay() {
         let window = command_window.unwrap();
         let prompt = read_prompt();
         let buffer = read_buffer();
-        werase(window);
-        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
 
+        werase(window);
 
         if buffer.is_empty() {
             wprintw(window, prompt);
@@ -99,12 +100,17 @@ pub extern "C" fn handle_redisplay() {
             wprintw(window, &format!("{} {}", prompt, buffer));
         }
 
-        let cursor_position =
-            cstr_ptr_to_str(rl_display_prompt).len() as i32 +
-            rl_point + 1;
-
-        wmove(window, 0, cursor_position);
-
+        let mut current_bytes = 0;
+        let cursor_position = buffer
+            .graphemes(true)
+            .take_while(|x| {
+                current_bytes += x.len();
+                current_bytes <= rl_point as usize
+            })
+            .collect::<String>()
+            .width();
+        wmove(window, 0, (prompt.len() + 1 + cursor_position) as i32);
+        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
         wrefresh(window);
     }
 }
@@ -112,14 +118,6 @@ pub extern "C" fn handle_redisplay() {
 extern "C" fn handle_input(line_ptr: *mut c_char) {
     if line_ptr.is_null() {
         return;
-    }
-
-    let line = unsafe { cstr_ptr_to_str(line_ptr) };
-    handle_redisplay();
-
-    if !line.is_empty() {
-        // add history
-        handle_redisplay();
     }
 
     unsafe { free(line_ptr as *mut c_void); }

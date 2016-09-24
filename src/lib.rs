@@ -1,12 +1,14 @@
 #[macro_use] extern crate lazy_static;
 
 extern crate libc;
-extern crate notify;
-extern crate ncurses;
-extern crate getopts;
+extern crate regex;
 extern crate toml;
 extern crate rustc_serialize;
-extern crate regex;
+extern crate getopts;
+extern crate unicode_width;
+extern crate unicode_segmentation;
+extern crate notify;
+extern crate ncurses;
 
 pub mod ext;
 pub mod utils;
