@@ -36,10 +36,8 @@ impl SettingsBuilder {
 
     pub fn construct(&self) -> Settings {
         if self.matches.opt_present("h") {
-            self.print_usage();
-            process::exit(0);
+            quit!(self.usage());
         }
-
         let values = SettingsValues {
             path_to_target_file: self.get_target(),
             max_lines_count: self.get_max_lines_count(),
@@ -54,9 +52,9 @@ impl SettingsBuilder {
         }
     }
 
-    fn print_usage(&self) {
+    fn usage(&self) -> String {
         let message = format!("Usage: {} FILE [options]", self.program_name);
-        print!("{}", self.options.usage(&message));
+        self.options.usage(&message)
     }
 
     fn get_target(&self) -> String {
@@ -66,8 +64,7 @@ impl SettingsBuilder {
                 value.to_string()
             },
             None => {
-                self.print_usage();
-                process::exit(1);
+                quit!(self.usage(), 1);
             }
         }
     }
@@ -91,8 +88,7 @@ impl SettingsBuilder {
                 } else if home_dir_config_path.exists() {
                     home_dir_config_path
                 } else {
-                    println!("No config file found.");
-                    process::exit(1);
+                    quit!("No config file found.", 1);
                 }
             }
         }
@@ -114,8 +110,8 @@ impl SettingsBuilder {
 
     fn assert_file_exists(&self, path: &PathBuf) {
         if !path.exists() {
-            println!("No file exists at provided location `{:?}`", path);
-            process::exit(2);
+            let message = format!("No file exists at provided location `{:?}`", path);
+            quit!(message, 2);
         }
     }
 }
@@ -136,8 +132,8 @@ impl ConfigFile {
         let mut file_handle = match File::open(&path) {
             Ok(value) => value,
             Err(message) => {
-                println!("{:?} couldn't be opened - {}", path, message);
-                process::exit(2);
+                let message = format!("{:?} couldn't be opened - {}", path, message);
+                quit!(message, 2);
             }
         };
 
@@ -147,16 +143,15 @@ impl ConfigFile {
         let parsed_contents =  match toml::Parser::new(contents).parse() {
             Some(value) => value,
             None => {
-                println!("Provided config file {:?} doesn't have a valid format.", path);
-                process::exit(2);
+                let message = format!("Provided config file {:?} doesn't have a valid format.", path);
+                quit!(message, 2);
             }
         };
 
         match toml::decode(toml::Value::Table(parsed_contents)) {
             Some(value) => value,
             None => {
-                println!("Error deserializing config");
-                process::exit(2);
+                quit!("Error deserializing config", 2);
             }
         }
     }

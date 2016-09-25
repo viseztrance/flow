@@ -17,8 +17,8 @@ impl Tail {
         let file_handle = match File::open(&file_path) {
             Ok(value) => value,
             Err(message) => {
-                println!("`{}` couldn't be opened - {}", file_path, message);
-                process::exit(2);
+                let message = format!("`{}` couldn't be opened - {}", file_path, message);
+                quit!(message, 2);
             }
         };
 

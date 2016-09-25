@@ -10,6 +10,7 @@ extern crate unicode_segmentation;
 extern crate notify;
 extern crate ncurses;
 
+#[macro_use] pub mod macros;
 pub mod ext;
 pub mod utils;
 pub mod core;
