@@ -1,12 +1,15 @@
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 use std::cell::RefCell;
 
 use utils::settings::Settings;
 use frontend::ui::Ui;
 use frontend::event::{Event, Direction, SearchAction};
 use frontend::search::QueryState;
+use core::runner::RUNNING;
 use core::line::LineCollection;
 use core::buffer::{Buffer, BufferCollection, ScrollState};
+use ext::signal::{self, SIGQUIT};
 
 pub struct Flow {
     ui: Ui,
@@ -40,13 +43,14 @@ impl Flow {
 
     pub fn process(&mut self, lines: Arc<Mutex<Vec<String>>>) {
         // TODO: move things into a dispatcher object
-        loop {
+        while running!() {
             match self.ui.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(value) => self.scroll(value),
                 Event::Navigation(state) => self.ui.navigation.change_state(state),
                 Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
+                Event::Quit => self.quit(),
                 _ => {
                     let mut mutex_guarded_lines = lines.lock().unwrap();
                     if !mutex_guarded_lines.is_empty() {
@@ -140,5 +144,11 @@ impl Flow {
 
     fn current_buffer(&self) -> &RefCell<Buffer> {
         self.buffer_collection.selected_item()
+    }
+
+    fn quit(&self) {
+        unsafe {
+            signal::raise(SIGQUIT);
+        }
     }
 }

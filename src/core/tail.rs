@@ -2,9 +2,11 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::SeekFrom;
 use std::process;
+use std::sync::atomic::Ordering;
 
 use notify::{RecommendedWatcher, Error, Watcher};
 use std::sync::mpsc::channel;
+use core::runner::RUNNING;
 
 pub struct Tail {
     file: File,
@@ -33,12 +35,12 @@ impl Tail {
         let (tx, rx) = channel();
         let mut w: Result<RecommendedWatcher, Error> = Watcher::new(tx);
 
-        loop {
+        while running!() {
             match w {
                 Ok(ref mut watcher) => {
                     let _ = watcher.watch(&self.path);
 
-                    match rx.recv() {
+                    match rx.try_recv() {
                         _ => {
                             let data = self.read_to_end();
                             callback(data);

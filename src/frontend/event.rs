@@ -20,6 +20,7 @@ pub enum Event {
     Navigation(NavigationState),
     Search(SearchAction),
     Resize,
+    Quit,
     Other
 }
 
@@ -58,6 +59,9 @@ impl EventBuilder {
             },
             Input::Kb(Key::Char('/'), None) => {
                 Some(Event::Navigation(NavigationState::Search))
+            },
+            Input::Kb(Key::Char('q'), None) => {
+                Some(Event::Quit)
             },
             _ => None
         }
