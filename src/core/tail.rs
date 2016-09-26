@@ -1,16 +1,15 @@
-use std::io::prelude::*;
+use std::io::prelude::{Read, Seek};
 use std::fs::File;
 use std::io::SeekFrom;
 use std::process;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+use std::thread::sleep;
 
-use notify::{RecommendedWatcher, Error, Watcher};
-use std::sync::mpsc::channel;
 use core::runner::RUNNING;
 
 pub struct Tail {
     file: File,
-    path: String,
     start_of_file_reached: bool
 }
 
@@ -26,29 +25,14 @@ impl Tail {
 
         Tail {
             file: file_handle,
-            path: file_path,
             start_of_file_reached: false
         }
     }
 
     pub fn watch<F>(&mut self, callback: F) where F : Fn(Vec<String>) {
-        let (tx, rx) = channel();
-        let mut w: Result<RecommendedWatcher, Error> = Watcher::new(tx);
-
         while running!() {
-            match w {
-                Ok(ref mut watcher) => {
-                    let _ = watcher.watch(&self.path);
-
-                    match rx.try_recv() {
-                        _ => {
-                            let data = self.read_to_end();
-                            callback(data);
-                        }
-                    }
-                },
-                Err(ref e) => panic!("Error while scanning for changes: {message:?}", message = e)
-            }
+            callback(self.read_to_end());
+            sleep(Duration::from_millis(50));
         }
     }
 

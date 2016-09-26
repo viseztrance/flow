@@ -7,7 +7,6 @@ extern crate rustc_serialize;
 extern crate getopts;
 extern crate unicode_width;
 extern crate unicode_segmentation;
-extern crate notify;
 extern crate ncurses;
 
 #[macro_use] pub mod macros;
