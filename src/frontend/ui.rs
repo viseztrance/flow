@@ -1,3 +1,5 @@
+use unicode_width::UnicodeWidthStr;
+
 use ncurses::*;
 
 use core::line::Line;
@@ -82,7 +84,6 @@ impl Ui {
         let (lines, scroll_offset) = data;
         let mut current_height = 0;
 
-
         for line in lines {
             let current_line_height = self.content.calculate_height_change(||{
                 line.print(&self.content);
@@ -111,10 +112,17 @@ impl Ui {
     pub fn highlight_matches(&self, line: &Line, query: &Query, total_height: i32, line_height: i32) {
         let matches: Vec<_> = line.content_without_ansi.match_indices(&query.text).collect();
         for (i, value) in matches {
+            let mut offset_x = i as i32;
+            let mut offset_y  = total_height;
+            if offset_x > self.plane.width {
+                offset_x = line.content_without_ansi.split_at(i).0.width() as i32;
+                offset_y = (offset_x / self.plane.width) + offset_y;
+                offset_x = offset_x % self.plane.width;
+            }
             wattron(self.content.window, A_STANDOUT());
-            mvwprintw(self.content.window, total_height, i as i32, value);
+            mvwprintw(self.content.window, offset_y, offset_x, value);
             wattroff(self.content.window, A_STANDOUT());
         }
-        mvwprintw(self.content.window, total_height + line_height, 0, "");
+        wmove(self.content.window, total_height + line_height, 0);
     }
 }
