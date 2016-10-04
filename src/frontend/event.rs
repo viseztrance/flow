@@ -57,7 +57,7 @@ impl EventBuilder {
             Input::Kb(Key::Right, None) => {
                 Some(Event::SelectMenuItem(Direction::Right))
             },
-            Input::Kb(Key::Char('/'), None) => {
+            Input::Kb(Key::Char('/'), None) | Input::Kb(Key::Char('F'), Some(Modifier::Ctrl(_))) => {
                 Some(Event::Navigation(NavigationState::Search))
             },
             Input::Kb(Key::Char('q'), None) => {
