@@ -39,8 +39,8 @@ impl Buffer {
             return ScrollState::Unchanged;
         }
 
-        let new_reverse_index = self.reverse_index as i32 + value;
-        self.reverse_index = min(max(0, new_reverse_index), lines.len() as i32) as usize;
+        let new_reverse_index = self.reverse_index as i64 + value as i64;
+        self.reverse_index = min(max(0, new_reverse_index), lines.len() as i64) as usize;
         ScrollState::Changed
     }
 

@@ -96,6 +96,18 @@ impl EventBuilder {
             Input::Kb(Key::Down, None) => {
                 Some(Event::ScrollContents(-1))
             },
+            Input::Kb(Key::Home, None) => {
+                Some(Event::ScrollContents(i32::max_value()))
+            },
+            Input::Kb(Key::End, None) => {
+                Some(Event::ScrollContents(i32::min_value()))
+            },
+            Input::Kb(Key::PageUp, None) => {
+                Some(Event::ScrollContents(10))
+            },
+            Input::Kb(Key::PageDown, None) => {
+                Some(Event::ScrollContents(-10))
+            },
             Input::Resize => Some(Event::Resize),
             _ => None
         }
