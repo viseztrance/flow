@@ -28,7 +28,7 @@ pub enum Key {
 
 pub enum Modifier {
     Alt(i32),
-    Ctrl(i32)
+    Ctrl
 }
 
 pub enum Input {
@@ -73,7 +73,7 @@ fn parse_key_code(code: i32) -> Input {
     } else {
         let name = keyname(pending);
         if name.contains("^") {
-            modifier = Some(Modifier::Ctrl(pending));
+            modifier = Some(Modifier::Ctrl);
             let value = Key::Char(name.chars().last().unwrap());
             return Input::Kb(value, modifier)
         }
