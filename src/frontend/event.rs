@@ -8,7 +8,6 @@ pub enum Direction {
 
 pub enum SearchAction {
     ReadInput(Vec<i32>),
-    ToggleHighlightMode,
     ToggleFilterMode,
     FindNextMatch,
     FindPreviousMatch,
@@ -74,9 +73,6 @@ impl EventBuilder {
             },
             Input::Kb(Key::Char('p'), Some(Modifier::Alt(_))) => {
                 Some(Event::Search(SearchAction::FindPreviousMatch))
-            },
-            Input::Kb(Key::Char('a'), Some(Modifier::Alt(_))) => {
-                Some(Event::Search(SearchAction::ToggleHighlightMode))
             },
             Input::Kb(Key::Char('m'), Some(Modifier::Alt(_))) => {
                 Some(Event::Search(SearchAction::ToggleFilterMode))

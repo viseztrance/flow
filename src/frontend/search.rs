@@ -4,11 +4,10 @@ use ncurses::*;
 
 use frontend::readline;
 
-static OPTIONS_WIDTH: i32 = 45;
+static OPTIONS_WIDTH: i32 = 29;
 
 pub struct Query {
     pub text: String,
-    pub highlight_mode: bool,
     pub filter_mode: bool
 }
 
@@ -41,7 +40,6 @@ impl Search {
     pub fn build_query(&self) -> Query {
         let query = Query {
             text: self.input_field.text.borrow().clone(),
-            highlight_mode: self.options.highlight_mode,
             filter_mode: self.options.filter_mode
         };
         query
@@ -53,11 +51,6 @@ impl Search {
 
     pub fn find_previous_match(&self) {
         // unimplemented!();
-    }
-
-    pub fn toggle_highlight_mode(&mut self) {
-        self.options.highlight_mode = !self.options.highlight_mode;
-        self.render();
     }
 
     pub fn toggle_filter_mode(&mut self) {
@@ -129,7 +122,6 @@ impl InputField {
 
 pub struct Options {
     pub window: WINDOW,
-    highlight_mode: bool,
     filter_mode: bool
 }
 
@@ -137,7 +129,6 @@ impl Options {
     fn new(parent_window: WINDOW) -> Options {
         Options {
             window: derwin(parent_window, 1, OPTIONS_WIDTH, 0, COLS - OPTIONS_WIDTH),
-            highlight_mode: false,
             filter_mode: false
         }
     }
@@ -148,7 +139,6 @@ impl Options {
         wbkgd(self.window, COLOR_PAIR(1));
 
         self.print_navigation();
-        self.print_highlight();
         self.print_filter();
     }
 
@@ -158,15 +148,6 @@ impl Options {
         wprintw(self.window, "ext / ");
         self.make_shortcut('P');
         wprintw(self.window, "rev");
-    }
-
-    fn print_highlight(&self) {
-        wprintw(self.window, " / ");
-        self.mark_as_active(self.highlight_mode, || {
-            wprintw(self.window, "Highlight ");
-            self.make_shortcut('A');
-            wprintw(self.window, "ll");
-        });
     }
 
     fn print_filter(&self) {

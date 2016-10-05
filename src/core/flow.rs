@@ -102,9 +102,6 @@ impl Flow {
             SearchAction::FindPreviousMatch => {
                 self.ui.navigation.search.find_previous_match();
             },
-            SearchAction::ToggleHighlightMode => {
-                self.ui.navigation.search.toggle_highlight_mode();
-            },
             SearchAction::ToggleFilterMode => {
                 self.ui.navigation.search.toggle_filter_mode();
             }
