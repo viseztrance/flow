@@ -79,23 +79,9 @@ impl Ui {
     }
 
     pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a Line> + 'a>, usize), query_opt: Option<Query>) {
-        self.plane.lines.clear();
-
         let (lines, scroll_offset) = data;
-        let mut current_height = 0;
 
-        for line in lines {
-            let current_line_height = self.content.calculate_height_change(||{
-                line.print(&self.content);
-            });
-
-            if let Some(ref query) = query_opt {
-                self.highlight_matches(line, query, current_height, current_line_height);
-            }
-            current_height += current_line_height;
-            self.plane.lines.push(current_line_height);
-        }
-
+        LinesPrinter::new(self, lines).draw(query_opt);
         self.scroll(scroll_offset as i32);
     }
 
@@ -108,21 +94,69 @@ impl Ui {
         let (input, key) = read_key();
         EventBuilder::new(input, key).construct(&self.navigation.state)
     }
+}
 
-    pub fn highlight_matches(&self, line: &Line, query: &Query, total_height: i32, line_height: i32) {
+struct LinesPrinter<'a> {
+    lines: Option<Box<Iterator<Item=&'a Line> + 'a>>,
+    ui: &'a mut Ui,
+    height: i32
+}
+
+impl<'a> LinesPrinter<'a> {
+    pub fn new(ui: &'a mut Ui, lines: Box<Iterator<Item=&'a Line> + 'a>) -> LinesPrinter<'a> {
+        LinesPrinter {
+            ui: ui,
+            lines: Some(lines),
+            height: 0
+        }
+    }
+
+    pub fn draw(&mut self, query_opt: Option<Query>) {
+        self.ui.plane.lines.clear();
+        self.height = 0;
+
+        if let Some(ref query) = query_opt {
+            for line in self.lines.take().unwrap() {
+                let is_match = line.content_without_ansi.contains(&query.text);
+
+                if !query.filter_mode || (query.filter_mode && is_match) {
+                    let height = self.ui.content.calculate_height_change(||{
+                        line.print(&self.ui.content);
+                    });
+
+                    if is_match {
+                        self.highlight(line, query, height);
+                    }
+
+                    self.height += height;
+                    self.ui.plane.lines.push(height);
+                }
+            }
+        } else {
+            for line in self.lines.take().unwrap() {
+                let height = self.ui.content.calculate_height_change(||{
+                    line.print(&self.ui.content);
+                });
+                self.height += height;
+                self.ui.plane.lines.push(height);
+            }
+        }
+    }
+
+    fn highlight(&self, line: &Line, query: &Query, height: i32) {
         let matches: Vec<_> = line.content_without_ansi.match_indices(&query.text).collect();
         for (i, value) in matches {
             let mut offset_x = i as i32;
-            let mut offset_y  = total_height;
-            if offset_x > self.plane.width {
+            let mut offset_y  = self.height;
+            if offset_x > self.ui.plane.width {
                 offset_x = line.content_without_ansi.split_at(i).0.width() as i32;
-                offset_y = (offset_x / self.plane.width) + offset_y;
-                offset_x = offset_x % self.plane.width;
+                offset_y = (offset_x / self.ui.plane.width) + offset_y;
+                offset_x = offset_x % self.ui.plane.width;
             }
-            wattron(self.content.window, A_STANDOUT());
-            mvwprintw(self.content.window, offset_y, offset_x, value);
-            wattroff(self.content.window, A_STANDOUT());
+            wattron(self.ui.content.window, A_STANDOUT());
+            mvwprintw(self.ui.content.window, offset_y, offset_x, value);
+            wattroff(self.ui.content.window, A_STANDOUT());
         }
-        wmove(self.content.window, total_height + line_height, 0);
+        wmove(self.ui.content.window, self.height + height, 0);
     }
 }

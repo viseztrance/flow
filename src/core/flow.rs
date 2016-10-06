@@ -91,9 +91,7 @@ impl Flow {
         match action {
             SearchAction::ReadInput(keys) => {
                 if self.ui.navigation.search.input_field.read(keys) == QueryState::Changed {
-                    let query = self.ui.navigation.search.build_query();
-                    let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-                    self.ui.print(lines_iter, Some(query));
+                    self.perform_search();
                 }
             },
             SearchAction::FindNextMatch => {
@@ -104,6 +102,7 @@ impl Flow {
             },
             SearchAction::ToggleFilterMode => {
                 self.ui.navigation.search.toggle_filter_mode();
+                self.perform_search();
             }
         }
     }
@@ -141,6 +140,12 @@ impl Flow {
 
     fn current_buffer(&self) -> &RefCell<Buffer> {
         self.buffer_collection.selected_item()
+    }
+
+    fn perform_search(&mut self) {
+        let query = self.ui.navigation.search.build_query();
+        let lines_iter = self.current_buffer().borrow().parse(&self.lines);
+        self.ui.print(lines_iter, Some(query));
     }
 
     fn quit(&self) {
