@@ -3,8 +3,8 @@ name = "All"
 
 [[filters]]
 name = "Having X"
-rule = "x"
+contains = "x"
 
 [[filters]]
 name = "Having xy"
-rule = "xy"
+contains = "xy"

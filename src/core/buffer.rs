@@ -1,8 +1,10 @@
 use std::cmp::{min, max};
-use core::line::{Line, LineCollection};
-use std::cell::RefCell;
 
 use regex::Regex;
+use rustc_serialize::{Decodable, Decoder};
+
+use core::line::{Line, LineCollection};
+use std::cell::RefCell;
 
 static DEFAULT_REVERSE_INDEX: usize = 0;
 
@@ -26,10 +28,10 @@ impl Buffer {
     }
 
     pub fn parse<'a>(&self, lines: &'a LineCollection) -> (Box<Iterator<Item=&'a Line> + 'a>, usize) {
-        let matcher = self.filter.matcher();
+        let mut filter = self.filter.clone();
 
         let parsed_lines = lines.entries.iter().filter(move |line| {
-            matcher.is_match(&line.content_without_ansi)
+            filter.is_match(&line.content_without_ansi)
         });
         (Box::new(parsed_lines), self.reverse_index)
     }
@@ -53,16 +55,48 @@ impl Buffer {
     }
 }
 
-#[derive(RustcDecodable, Clone)]
+#[derive(Clone)]
 pub struct BufferFilter {
     pub name: String,
-    pub rule: Option<String>,
+    pub starts_with: Option<Regex>,
+    pub contains: Regex,
+    pub ends_with: Option<Regex>
 }
 
 impl BufferFilter {
-    pub fn matcher(&self) -> Regex {
-        let match_expression = self.rule.clone().unwrap_or(".*".to_string());
-        Regex::new(&match_expression).unwrap()
+    pub fn is_match(&mut self, text: &String) -> bool {
+        // TODO: add state
+        self.contains.is_match(&text)
+    }
+}
+
+impl Decodable for BufferFilter {
+    fn decode<D: Decoder>(d: &mut D) -> Result<BufferFilter, D::Error> {
+        d.read_struct("BufferFilter", 2, |d| {
+            let name = try!(d.read_struct_field("name", 0, |d| d.read_str()));
+
+            let starts_with = match d.read_struct_field("starts_with", 1, |d| d.read_str()) {
+                Ok(val) => Some(Regex::new(&val).unwrap()),
+                Err(_) => None
+            };
+
+            let contains = match d.read_struct_field("contains", 2, |d| d.read_str()) {
+                Ok(val) => Regex::new(&val),
+                Err(_) => Regex::new(".*")
+            }.unwrap();
+
+            let ends_with = match d.read_struct_field("ends_with", 3, |d| d.read_str()) {
+                Ok(val) => Some(Regex::new(&val).unwrap()),
+                Err(_) => None
+            };
+
+            Ok(BufferFilter {
+                name: name,
+                starts_with: starts_with,
+                contains: contains,
+                ends_with: ends_with
+            })
+        })
     }
 }
 
