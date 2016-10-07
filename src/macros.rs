@@ -13,3 +13,12 @@ macro_rules! quit {
         process::exit($code)
     };
 }
+
+macro_rules! assert_quit {
+    ($code: expr, $msg: expr) => {
+        if !$code {
+            println!("{}", $msg);
+            process::exit(2)
+        }
+    }
+}

@@ -6,5 +6,6 @@ name = "Having X"
 contains = "x"
 
 [[filters]]
-name = "Having xy"
-contains = "xy"
+name = "Request"
+starts_with = "Started"
+ends_with = "Completed"

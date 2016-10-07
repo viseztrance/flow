@@ -1,10 +1,8 @@
 use std::cmp::{min, max};
-
-use regex::Regex;
-use rustc_serialize::{Decodable, Decoder};
+use std::cell::RefCell;
 
 use core::line::{Line, LineCollection};
-use std::cell::RefCell;
+use core::filter::Filter;
 
 static DEFAULT_REVERSE_INDEX: usize = 0;
 
@@ -15,12 +13,12 @@ pub enum ScrollState {
 }
 
 pub struct Buffer {
-    pub filter: BufferFilter,
+    pub filter: Filter,
     pub reverse_index: usize
 }
 
 impl Buffer {
-    pub fn new(filter: BufferFilter) -> Buffer {
+    pub fn new(filter: Filter) -> Buffer {
         Buffer {
             filter: filter,
             reverse_index: DEFAULT_REVERSE_INDEX
@@ -55,58 +53,13 @@ impl Buffer {
     }
 }
 
-#[derive(Clone)]
-pub struct BufferFilter {
-    pub name: String,
-    pub starts_with: Option<Regex>,
-    pub contains: Regex,
-    pub ends_with: Option<Regex>
-}
-
-impl BufferFilter {
-    pub fn is_match(&mut self, text: &String) -> bool {
-        // TODO: add state
-        self.contains.is_match(&text)
-    }
-}
-
-impl Decodable for BufferFilter {
-    fn decode<D: Decoder>(d: &mut D) -> Result<BufferFilter, D::Error> {
-        d.read_struct("BufferFilter", 2, |d| {
-            let name = try!(d.read_struct_field("name", 0, |d| d.read_str()));
-
-            let starts_with = match d.read_struct_field("starts_with", 1, |d| d.read_str()) {
-                Ok(val) => Some(Regex::new(&val).unwrap()),
-                Err(_) => None
-            };
-
-            let contains = match d.read_struct_field("contains", 2, |d| d.read_str()) {
-                Ok(val) => Regex::new(&val),
-                Err(_) => Regex::new(".*")
-            }.unwrap();
-
-            let ends_with = match d.read_struct_field("ends_with", 3, |d| d.read_str()) {
-                Ok(val) => Some(Regex::new(&val).unwrap()),
-                Err(_) => None
-            };
-
-            Ok(BufferFilter {
-                name: name,
-                starts_with: starts_with,
-                contains: contains,
-                ends_with: ends_with
-            })
-        })
-    }
-}
-
 pub struct BufferCollection {
     items: Vec<RefCell<Buffer>>,
     index: usize,
 }
 
 impl BufferCollection {
-    pub fn from_filters(filters: Vec<BufferFilter>) -> BufferCollection {
+    pub fn from_filters(filters: Vec<Filter>) -> BufferCollection {
         let items = filters.iter().map(|e| RefCell::new(Buffer::new(e.clone()))).collect();
 
         BufferCollection {

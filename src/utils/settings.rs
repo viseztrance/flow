@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use getopts::{Options, Matches};
 use toml;
 
-use core::buffer::BufferFilter;
+use core::filter::Filter;
 
 static DEFAULT_LAST_LINES_SHOWN: usize = 10;
 static DEFAULT_MAX_LINES_STORED: usize = 5000;
@@ -124,7 +124,7 @@ pub struct SettingsValues {
 
 #[derive(RustcDecodable)]
 pub struct ConfigFile {
-    pub filters: Vec<BufferFilter>
+    pub filters: Vec<Filter>
 }
 
 impl ConfigFile {
