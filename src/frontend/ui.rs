@@ -24,7 +24,7 @@ pub struct Ui {
 impl Ui {
     pub fn new(menu_item_names: &Vec<String>) -> Ui {
         ::std::env::set_var("ESCDELAY", "25");
-        setlocale(LcCategory::all, ""); // Must be set *before* init
+        setlocale(LcCategory::all, ""); // Must be set *before* ncurses init
 
         readline::init();
 
@@ -40,13 +40,14 @@ impl Ui {
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
         init_pair(2, COLOR_BLACK, COLOR_YELLOW);
         init_pair(3, COLOR_YELLOW, COLOR_BLUE);
+        init_pair(4, COLOR_WHITE, COLOR_MAGENTA);
         color::generate_pairs();
         let plane = Plane::new();
 
         Ui {
             navigation: Navigation::new(plane.height - 1, 0, menu_item_names),
             content: Content::new(MAX_SCROLLING_LINES, plane.width),
-            plane: plane,
+            plane: plane
         }
     }
 
@@ -113,6 +114,7 @@ impl<'a> LinesPrinter<'a> {
 
     pub fn draw(&mut self, query_opt: Option<Query>) {
         self.ui.plane.lines.clear();
+        self.ui.navigation.search.matches_found = false;
         self.height = 0;
 
         if let Some(ref query) = query_opt {
@@ -125,6 +127,7 @@ impl<'a> LinesPrinter<'a> {
                     });
 
                     if is_match {
+                        self.ui.navigation.search.matches_found = true;
                         self.highlight(line, query, height);
                     }
 

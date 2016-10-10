@@ -146,6 +146,7 @@ impl Flow {
         let query = self.ui.navigation.search.build_query();
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
         self.ui.print(lines_iter, Some(query));
+        self.ui.navigation.search.render();
     }
 
     fn quit(&self) {

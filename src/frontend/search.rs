@@ -5,6 +5,8 @@ use ncurses::*;
 use frontend::readline;
 
 static OPTIONS_WIDTH: i32 = 29;
+static WITH_MATCHES_COLOR_PAIR_ID: i16 = 1;
+static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
 
 pub struct Query {
     pub text: String,
@@ -15,6 +17,7 @@ pub struct Search {
     pub window: WINDOW,
     pub options: Options,
     pub input_field: InputField,
+    pub matches_found: bool,
     panel: PANEL
 }
 
@@ -26,14 +29,17 @@ impl Search {
             window: window,
             options: Options::new(window),
             input_field: InputField::new(window),
-            panel: new_panel(window)
+            panel: new_panel(window),
+            matches_found: false
         }
     }
 
     pub fn render(&self) {
-        wbkgd(self.window, COLOR_PAIR(1));
-        self.input_field.render();
-        self.options.render();
+        let color_pair = COLOR_PAIR(self.color_pair_id());
+
+        wbkgd(self.window, color_pair);
+        self.input_field.render(color_pair);
+        self.options.render(color_pair);
         wrefresh(self.window);
     }
 
@@ -69,6 +75,14 @@ impl Search {
         curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
         hide_panel(self.panel);
     }
+
+    fn color_pair_id(&self) -> i16 {
+        if !self.matches_found && self.input_field.text.borrow().len() > 0 {
+            NO_MATCHES_COLOR_PAIR_ID
+        } else  {
+            WITH_MATCHES_COLOR_PAIR_ID
+        }
+    }
 }
 #[derive(PartialEq)]
 pub enum QueryState {
@@ -92,10 +106,10 @@ impl InputField {
         }
     }
 
-    fn render(&self) {
+    fn render(&self, color_pair: u64) {
         wclear(self.window);
-        wbkgd(self.window, COLOR_PAIR(1));
-        wattron(self.window, COLOR_PAIR(1));
+        wbkgd(self.window, color_pair);
+        wattron(self.window, color_pair);
     }
 
     pub fn read(&self, keys: Vec<i32>) -> QueryState {
@@ -133,13 +147,13 @@ impl Options {
         }
     }
 
-    fn render(&self) {
+    fn render(&self, color_pair: u64) {
         wclear(self.window);
         readline::handle_redisplay();
-        wbkgd(self.window, COLOR_PAIR(1));
+        wbkgd(self.window, color_pair);
 
         self.print_navigation();
-        self.print_filter();
+        self.print_filter(color_pair);
     }
 
     fn print_navigation(&self) {
@@ -150,28 +164,22 @@ impl Options {
         wprintw(self.window, "rev");
     }
 
-    fn print_filter(&self) {
+    fn print_filter(&self, color_pair: u64) {
         wprintw(self.window, " / ");
-        self.mark_as_active(self.filter_mode, || {
-            wprintw(self.window, "Filter ");
-            self.make_shortcut('M');
-            wprintw(self.window, "ode");
-        });
+        if self.filter_mode {
+            wattron(self.window, COLOR_PAIR(2));
+        }
+        wprintw(self.window, "Filter ");
+        self.make_shortcut('M');
+        wprintw(self.window, "ode");
+        if self.filter_mode {
+            wattroff(self.window, color_pair);
+        }
     }
 
     fn make_shortcut(&self, letter: char) {
         wattron(self.window, A_UNDERLINE());
         waddch(self.window, letter as u64);
         wattroff(self.window, A_UNDERLINE());
-    }
-
-    fn mark_as_active<F>(&self, active: bool, callback: F) where F : Fn() {
-        if active {
-            wattron(self.window, COLOR_PAIR(2));
-        }
-        callback();
-        if active {
-            wattroff(self.window, COLOR_PAIR(1));
-        }
     }
 }
