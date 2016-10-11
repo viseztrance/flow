@@ -13,8 +13,15 @@ pub enum SearchAction {
     FindPreviousMatch,
 }
 
+pub enum Offset {
+    Line(i32),
+    Viewport(i32),
+    Top,
+    Bottom
+}
+
 pub enum Event {
-    ScrollContents(i32),
+    ScrollContents(Offset),
     SelectMenuItem(Direction),
     Navigation(NavigationState),
     Search(SearchAction),
@@ -87,22 +94,22 @@ impl EventBuilder {
     fn create_global_event(&self) -> Option<Event> {
         match self.input {
             Input::Kb(Key::Up, None) => {
-                Some(Event::ScrollContents(1))
+                Some(Event::ScrollContents(Offset::Line(1)))
             },
             Input::Kb(Key::Down, None) => {
-                Some(Event::ScrollContents(-1))
-            },
-            Input::Kb(Key::Home, None) => {
-                Some(Event::ScrollContents(i32::max_value()))
-            },
-            Input::Kb(Key::End, None) => {
-                Some(Event::ScrollContents(i32::min_value()))
+                Some(Event::ScrollContents(Offset::Line(-1)))
             },
             Input::Kb(Key::PageUp, None) => {
-                Some(Event::ScrollContents(10))
+                Some(Event::ScrollContents(Offset::Viewport(1)))
             },
             Input::Kb(Key::PageDown, None) => {
-                Some(Event::ScrollContents(-10))
+                Some(Event::ScrollContents(Offset::Viewport(-1)))
+            },
+            Input::Kb(Key::Home, None) => {
+                Some(Event::ScrollContents(Offset::Top))
+            },
+            Input::Kb(Key::End, None) => {
+                Some(Event::ScrollContents(Offset::Bottom))
             },
             Input::Resize => Some(Event::Resize),
             _ => None

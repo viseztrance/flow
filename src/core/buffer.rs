@@ -6,12 +6,6 @@ use core::filter::Filter;
 
 static DEFAULT_REVERSE_INDEX: usize = 0;
 
-#[derive(PartialEq)]
-pub enum ScrollState {
-    Unchanged,
-    Changed
-}
-
 pub struct Buffer {
     pub filter: Filter,
     pub reverse_index: usize
@@ -34,14 +28,9 @@ impl Buffer {
         (Box::new(parsed_lines), self.reverse_index)
     }
 
-    pub fn adjust_reverse_index(&mut self, value: i32, lines: &LineCollection) -> ScrollState {
-        if value == DEFAULT_REVERSE_INDEX as i32 {
-            return ScrollState::Unchanged;
-        }
-
-        let new_reverse_index = self.reverse_index as i64 + value as i64;
-        self.reverse_index = min(max(0, new_reverse_index), lines.len() as i64) as usize;
-        ScrollState::Changed
+    pub fn adjust_reverse_index(&mut self, value: i32, max_value: i32) {
+        let new_reverse_index = self.reverse_index as i32 + value;
+        self.reverse_index = min(max(0, new_reverse_index), max_value) as usize;
     }
 
     pub fn is_scrolled(&self) -> bool {

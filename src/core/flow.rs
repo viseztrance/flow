@@ -4,11 +4,11 @@ use std::cell::RefCell;
 
 use utils::settings::Settings;
 use ui::frame::Frame;
-use ui::event::{Event, Direction, SearchAction};
+use ui::event::{Event, Direction, SearchAction, Offset};
 use ui::search::QueryState;
 use core::runner::RUNNING;
 use core::line::LineCollection;
-use core::buffer::{Buffer, BufferCollection, ScrollState};
+use core::buffer::{Buffer, BufferCollection};
 use ext::signal::{self, SIGQUIT};
 
 pub struct Flow {
@@ -46,7 +46,7 @@ impl Flow {
         while running!() {
             match self.frame.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
-                Event::ScrollContents(value) => self.scroll(value),
+                Event::ScrollContents(offset) => self.scroll(offset),
                 Event::Navigation(state) => self.frame.navigation.change_state(state),
                 Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
@@ -76,15 +76,26 @@ impl Flow {
         self.reset_view();
     }
 
-    fn scroll(&mut self, value: i32) {
-        let result = self.current_buffer()
-            .borrow_mut()
-            .adjust_reverse_index(value, &self.lines);
+    fn scroll(&mut self, offset: Offset) {
+        let mut buffer = self.current_buffer().borrow_mut();
+        let max_value = self.frame.plane.virtual_height() - self.frame.plane.height;
 
-        if result == ScrollState::Changed {
-            let offset = self.current_buffer().borrow().reverse_index as i32;
-            self.frame.scroll(offset);
-        }
+        match offset {
+            Offset::Line(value) => {
+                buffer.adjust_reverse_index(value, max_value);
+            },
+            Offset::Viewport(value) => {
+                buffer.adjust_reverse_index(value * self.frame.plane.height - 4, max_value);
+            },
+            Offset::Top => {
+                buffer.reverse_index = max_value as usize;
+            },
+            Offset::Bottom => {
+                buffer.reset_reverse_index();
+            }
+        };
+
+        self.frame.scroll(buffer.reverse_index as i32);
     }
 
     fn handle_search(&mut self, action: SearchAction) {
@@ -121,7 +132,7 @@ impl Flow {
         self.reset_view();
         if self.current_buffer().borrow().is_scrolled() {
             let offset = self.frame.plane.virtual_height() - initial_height;
-            self.scroll(offset);
+            self.scroll(Offset::Line(offset));
         }
 
         self.lines.clear_excess();
