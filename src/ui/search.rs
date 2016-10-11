@@ -89,7 +89,7 @@ impl Search {
     }
 }
 #[derive(PartialEq)]
-pub enum QueryState {
+pub enum State {
     Changed,
     Unchanged
 }
@@ -116,7 +116,7 @@ impl InputField {
         wattron(self.window, color_pair);
     }
 
-    pub fn read(&self, keys: Vec<i32>) -> QueryState {
+    pub fn read(&self, keys: Vec<i32>) -> State {
         for key in keys {
             readline::forward_input(key);
         }
@@ -125,10 +125,10 @@ impl InputField {
         let mut current_text = self.text.borrow_mut();
 
         if *current_text == pending_text {
-            QueryState::Unchanged
+            State::Unchanged
         } else {
             *current_text = pending_text;
-            QueryState::Changed
+            State::Changed
         }
     }
 

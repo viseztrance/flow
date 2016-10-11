@@ -2,10 +2,13 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
 use std::cell::RefCell;
 
+use ui::readline;
 use utils::settings::Settings;
 use ui::frame::Frame;
 use ui::event::{Event, Direction, SearchAction, Offset};
-use ui::search::QueryState;
+use ui::navigation::State as NavigationState;
+use ui::search::State as QueryState;
+
 use core::runner::RUNNING;
 use core::line::LineCollection;
 use core::buffer::{Buffer, BufferCollection};
@@ -47,7 +50,14 @@ impl Flow {
             match self.frame.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(offset) => self.scroll(offset),
-                Event::Navigation(state) => self.frame.navigation.change_state(state),
+                Event::Navigation(state) => {
+                    if self.frame.navigation.change_state(state) {
+                        match self.frame.navigation.state {
+                            NavigationState::Search => readline::move_cursor(),
+                            NavigationState::Menu => self.reset_view()
+                        }
+                    }
+                },
                 Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
                 Event::Quit => self.quit(),

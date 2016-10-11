@@ -1,6 +1,5 @@
 use ncurses::*;
 
-use ui::readline;
 use ui::menu::Menu;
 use ui::search::Search;
 
@@ -35,12 +34,14 @@ impl Navigation {
         self.menu.destroy();
     }
 
-    pub fn change_state(&mut self, new_state: State) {
+    pub fn change_state(&mut self, new_state: State) -> bool {
         if self.state == new_state {
-            return;
+            false
+        } else {
+            self.state = new_state;
+            self.handle_visibility();
+            true
         }
-        self.state = new_state;
-        self.handle_visibility();
     }
 
     pub fn resize(&self, position_x: i32, position_y: i32) {
@@ -66,9 +67,5 @@ impl Navigation {
 
         update_panels();
         doupdate();
-
-        if self.state == State::Search {
-            readline::move_cursor();
-        }
     }
 }
