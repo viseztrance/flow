@@ -113,6 +113,7 @@ impl<'a> LinesPrinter<'a> {
     }
 
     pub fn draw(&mut self, query_opt: Option<Query>) {
+        self.frame.content.clear();
         self.frame.plane.lines.clear();
         self.frame.navigation.search.matches_found = false;
         self.height = 0;
