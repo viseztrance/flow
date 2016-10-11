@@ -2,8 +2,8 @@ use ncurses::*;
 
 use core::line::Line;
 use utils::ansi_decoder::{Component, Style};
-use frontend::color::ColorPair;
-use frontend::content::Content;
+use ui::color::ColorPair;
+use ui::content::Content;
 
 pub trait Print {
     fn print(&self, content: &Content);

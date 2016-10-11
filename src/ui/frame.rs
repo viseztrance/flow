@@ -3,26 +3,26 @@ use unicode_width::UnicodeWidthStr;
 use ncurses::*;
 
 use core::line::Line;
-use frontend::readline;
-use frontend::color;
-use frontend::input::read_key;
-use frontend::event::{EventBuilder, Event};
-use frontend::navigation::Navigation;
-use frontend::plane::Plane;
-use frontend::content::Content;
-use frontend::printer::Print;
-use frontend::search::Query;
+use ui::readline;
+use ui::color;
+use ui::input::read_key;
+use ui::event::{EventBuilder, Event};
+use ui::navigation::Navigation;
+use ui::plane::Plane;
+use ui::content::Content;
+use ui::printer::Print;
+use ui::search::Query;
 
 static MAX_SCROLLING_LINES: i32 = 15_000;
 
-pub struct Ui {
+pub struct Frame {
     pub plane: Plane,
     pub navigation: Navigation,
     pub content: Content
 }
 
-impl Ui {
-    pub fn new(menu_item_names: &Vec<String>) -> Ui {
+impl Frame {
+    pub fn new(menu_item_names: &Vec<String>) -> Frame {
         ::std::env::set_var("ESCDELAY", "25");
         setlocale(LcCategory::all, ""); // Must be set *before* ncurses init
 
@@ -44,7 +44,7 @@ impl Ui {
         color::generate_pairs();
         let plane = Plane::new();
 
-        Ui {
+        Frame {
             navigation: Navigation::new(plane.height - 1, 0, menu_item_names),
             content: Content::new(MAX_SCROLLING_LINES, plane.width),
             plane: plane
@@ -99,22 +99,22 @@ impl Ui {
 
 struct LinesPrinter<'a> {
     lines: Option<Box<Iterator<Item=&'a Line> + 'a>>,
-    ui: &'a mut Ui,
+    frame: &'a mut Frame,
     height: i32
 }
 
 impl<'a> LinesPrinter<'a> {
-    pub fn new(ui: &'a mut Ui, lines: Box<Iterator<Item=&'a Line> + 'a>) -> LinesPrinter<'a> {
+    pub fn new(frame: &'a mut Frame, lines: Box<Iterator<Item=&'a Line> + 'a>) -> LinesPrinter<'a> {
         LinesPrinter {
-            ui: ui,
+            frame: frame,
             lines: Some(lines),
             height: 0
         }
     }
 
     pub fn draw(&mut self, query_opt: Option<Query>) {
-        self.ui.plane.lines.clear();
-        self.ui.navigation.search.matches_found = false;
+        self.frame.plane.lines.clear();
+        self.frame.navigation.search.matches_found = false;
         self.height = 0;
 
         if let Some(ref query) = query_opt {
@@ -122,26 +122,26 @@ impl<'a> LinesPrinter<'a> {
                 let is_match = line.content_without_ansi.contains(&query.text);
 
                 if !query.filter_mode || (query.filter_mode && is_match) {
-                    let height = self.ui.content.calculate_height_change(||{
-                        line.print(&self.ui.content);
+                    let height = self.frame.content.calculate_height_change(||{
+                        line.print(&self.frame.content);
                     });
 
                     if is_match {
-                        self.ui.navigation.search.matches_found = true;
+                        self.frame.navigation.search.matches_found = true;
                         self.highlight(line, query, height);
                     }
 
                     self.height += height;
-                    self.ui.plane.lines.push(height);
+                    self.frame.plane.lines.push(height);
                 }
             }
         } else {
             for line in self.lines.take().unwrap() {
-                let height = self.ui.content.calculate_height_change(||{
-                    line.print(&self.ui.content);
+                let height = self.frame.content.calculate_height_change(||{
+                    line.print(&self.frame.content);
                 });
                 self.height += height;
-                self.ui.plane.lines.push(height);
+                self.frame.plane.lines.push(height);
             }
         }
     }
@@ -151,15 +151,15 @@ impl<'a> LinesPrinter<'a> {
         for (i, value) in matches {
             let mut offset_x = i as i32;
             let mut offset_y  = self.height;
-            if offset_x > self.ui.plane.width {
+            if offset_x > self.frame.plane.width {
                 offset_x = line.content_without_ansi.split_at(i).0.width() as i32;
-                offset_y = (offset_x / self.ui.plane.width) + offset_y;
-                offset_x = offset_x % self.ui.plane.width;
+                offset_y = (offset_x / self.frame.plane.width) + offset_y;
+                offset_x = offset_x % self.frame.plane.width;
             }
-            wattron(self.ui.content.window, A_STANDOUT());
-            mvwprintw(self.ui.content.window, offset_y, offset_x, value);
-            wattroff(self.ui.content.window, A_STANDOUT());
+            wattron(self.frame.content.window, A_STANDOUT());
+            mvwprintw(self.frame.content.window, offset_y, offset_x, value);
+            wattroff(self.frame.content.window, A_STANDOUT());
         }
-        wmove(self.ui.content.window, self.height + height, 0);
+        wmove(self.frame.content.window, self.height + height, 0);
     }
 }

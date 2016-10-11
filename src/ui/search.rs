@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use ncurses::*;
 
-use frontend::readline;
+use ui::readline;
 
 static OPTIONS_WIDTH: i32 = 29;
 static WITH_MATCHES_COLOR_PAIR_ID: i16 = 1;

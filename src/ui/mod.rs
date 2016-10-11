@@ -1,4 +1,4 @@
-pub mod ui;
+pub mod frame;
 pub mod plane;
 pub mod content;
 pub mod navigation;

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use regex::Regex;
 use ncurses::*;
 
-use frontend::color::COLOR_DEFAULT;
+use ui::color::COLOR_DEFAULT;
 
 lazy_static! {
     static ref ANSI_TO_NCURSES_MAPPING: HashMap<&'static str, Style> = {

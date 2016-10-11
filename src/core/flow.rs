@@ -3,16 +3,16 @@ use std::sync::atomic::Ordering;
 use std::cell::RefCell;
 
 use utils::settings::Settings;
-use frontend::ui::Ui;
-use frontend::event::{Event, Direction, SearchAction};
-use frontend::search::QueryState;
+use ui::frame::Frame;
+use ui::event::{Event, Direction, SearchAction};
+use ui::search::QueryState;
 use core::runner::RUNNING;
 use core::line::LineCollection;
 use core::buffer::{Buffer, BufferCollection, ScrollState};
 use ext::signal::{self, SIGQUIT};
 
 pub struct Flow {
-    ui: Ui,
+    frame: Frame,
     lines: LineCollection,
     buffer_collection: BufferCollection
 }
@@ -27,27 +27,27 @@ impl Flow {
             .collect();
 
         Flow {
-            ui: Ui::new(&menu_item_names),
+            frame: Frame::new(&menu_item_names),
             lines: LineCollection::new(settings.values.max_lines_count),
             buffer_collection: BufferCollection::from_filters(settings.config_file.filters)
         }
     }
 
     pub fn render(&self) {
-        self.ui.render();
+        self.frame.render();
     }
 
     pub fn terminate(&self) {
-        self.ui.destroy();
+        self.frame.destroy();
     }
 
     pub fn process(&mut self, lines: Arc<Mutex<Vec<String>>>) {
         // TODO: move things into a dispatcher object
         while running!() {
-            match self.ui.watch() {
+            match self.frame.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
                 Event::ScrollContents(value) => self.scroll(value),
-                Event::Navigation(state) => self.ui.navigation.change_state(state),
+                Event::Navigation(state) => self.frame.navigation.change_state(state),
                 Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
                 Event::Quit => self.quit(),
@@ -65,11 +65,11 @@ impl Flow {
     fn select_menu_item(&mut self, direction: Direction) {
         match direction {
             Direction::Left => {
-                self.ui.select_left_menu_item();
+                self.frame.select_left_menu_item();
                 self.buffer_collection.select_previous();
             },
             Direction::Right => {
-                self.ui.select_right_menu_item();
+                self.frame.select_right_menu_item();
                 self.buffer_collection.select_next();
             }
         };
@@ -83,44 +83,44 @@ impl Flow {
 
         if result == ScrollState::Changed {
             let offset = self.current_buffer().borrow().reverse_index as i32;
-            self.ui.scroll(offset);
+            self.frame.scroll(offset);
         }
     }
 
     fn handle_search(&mut self, action: SearchAction) {
         match action {
             SearchAction::ReadInput(keys) => {
-                if self.ui.navigation.search.input_field.read(keys) == QueryState::Changed {
+                if self.frame.navigation.search.input_field.read(keys) == QueryState::Changed {
                     self.perform_search();
                 }
             },
             SearchAction::FindNextMatch => {
-                self.ui.navigation.search.find_next_match();
+                self.frame.navigation.search.find_next_match();
             },
             SearchAction::FindPreviousMatch => {
-                self.ui.navigation.search.find_previous_match();
+                self.frame.navigation.search.find_previous_match();
             },
             SearchAction::ToggleFilterMode => {
-                self.ui.navigation.search.toggle_filter_mode();
+                self.frame.navigation.search.toggle_filter_mode();
                 self.perform_search();
             }
         }
     }
 
     fn resize(&mut self) {
-        self.ui.resize();
+        self.frame.resize();
         self.reset_scroll();
         self.reset_view();
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
-        let initial_height = self.ui.plane.virtual_height();
+        let initial_height = self.frame.plane.virtual_height();
 
         self.lines.extend(pending_lines);
 
         self.reset_view();
         if self.current_buffer().borrow().is_scrolled() {
-            let offset = self.ui.plane.virtual_height() - initial_height;
+            let offset = self.frame.plane.virtual_height() - initial_height;
             self.scroll(offset);
         }
 
@@ -128,10 +128,10 @@ impl Flow {
     }
 
     fn reset_view(&mut self) {
-        self.ui.content.clear();
+        self.frame.content.clear();
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-        self.ui.print(lines_iter, None);
-        self.ui.scroll(self.current_buffer().borrow().reverse_index as i32);
+        self.frame.print(lines_iter, None);
+        self.frame.scroll(self.current_buffer().borrow().reverse_index as i32);
     }
 
     fn reset_scroll(&self) {
@@ -143,10 +143,10 @@ impl Flow {
     }
 
     fn perform_search(&mut self) {
-        let query = self.ui.navigation.search.build_query();
+        let query = self.frame.navigation.search.build_query();
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-        self.ui.print(lines_iter, Some(query));
-        self.ui.navigation.search.render();
+        self.frame.print(lines_iter, Some(query));
+        self.frame.navigation.search.render();
     }
 
     fn quit(&self) {

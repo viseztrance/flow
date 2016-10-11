@@ -1,7 +1,7 @@
 use ncurses::*;
 
-use frontend::menu::Menu;
-use frontend::search::Search;
+use ui::menu::Menu;
+use ui::search::Search;
 
 #[derive(PartialEq)]
 pub enum State {

@@ -13,4 +13,4 @@ extern crate ncurses;
 pub mod ext;
 pub mod utils;
 pub mod core;
-pub mod frontend;
+pub mod ui;
