@@ -41,6 +41,7 @@ impl Search {
         self.input_field.render(color_pair);
         self.options.render(color_pair);
         wrefresh(self.window);
+        readline::move_cursor();
     }
 
     pub fn build_query(&self) -> Query {

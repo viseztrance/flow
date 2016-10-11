@@ -1,5 +1,5 @@
 //
-// The following code is based on these implementations:
+// The following code is based on
 // https://github.com/ulfalizer/readline-and-ncurses by Ulf Magnusson
 //
 
@@ -67,11 +67,30 @@ pub fn read_prompt<'a>() -> &'a str {
     }
 }
 
+pub fn move_cursor() {
+    unsafe {
+        let window = command_window.unwrap();
+        let prompt = read_prompt();
+        let buffer = read_buffer();
+
+        let mut current_bytes = 0;
+        let cursor_position = buffer
+            .graphemes(true)
+            .take_while(|x| {
+                current_bytes += x.len();
+                current_bytes <= rl_point as usize
+            })
+            .collect::<String>()
+            .width();
+        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
+        wmove(window, 0, (prompt.len() + 1 + cursor_position) as i32);
+        wrefresh(window);
+    }
+}
+
 pub fn reset() {
     unsafe {
         rl_reset_line_state();
-        let offset = read_prompt().len() + 1;
-        wmove(command_window.unwrap(), 0, offset as i32);
     }
 }
 
@@ -87,32 +106,19 @@ extern "C" fn is_input_available() -> i32 {
 }
 
 pub extern "C" fn handle_redisplay() {
-    unsafe {
-        let window = command_window.unwrap();
-        let prompt = read_prompt();
-        let buffer = read_buffer();
+    let window = unsafe { command_window.unwrap() };
+    let prompt = read_prompt();
+    let buffer = read_buffer();
 
-        werase(window);
+    werase(window);
 
-        if buffer.is_empty() {
-            wprintw(window, prompt);
-        } else {
-            wprintw(window, &format!("{} {}", prompt, buffer));
-        }
-
-        let mut current_bytes = 0;
-        let cursor_position = buffer
-            .graphemes(true)
-            .take_while(|x| {
-                current_bytes += x.len();
-                current_bytes <= rl_point as usize
-            })
-            .collect::<String>()
-            .width();
-        wmove(window, 0, (prompt.len() + 1 + cursor_position) as i32);
-        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
-        wrefresh(window);
+    if buffer.is_empty() {
+        wprintw(window, prompt);
+    } else {
+        wprintw(window, &format!("{} {}", prompt, buffer));
     }
+
+    move_cursor();
 }
 
 extern "C" fn handle_input(line_ptr: *mut c_char) {

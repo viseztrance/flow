@@ -1,5 +1,6 @@
 use ncurses::*;
 
+use ui::readline;
 use ui::menu::Menu;
 use ui::search::Search;
 
@@ -65,5 +66,9 @@ impl Navigation {
 
         update_panels();
         doupdate();
+
+        if self.state == State::Search {
+            readline::move_cursor();
+        }
     }
 }
