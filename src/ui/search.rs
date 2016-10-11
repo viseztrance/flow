@@ -44,12 +44,15 @@ impl Search {
         readline::move_cursor();
     }
 
-    pub fn build_query(&self) -> Query {
-        let query = Query {
-            text: self.input_field.text.borrow().clone(),
-            filter_mode: self.options.filter_mode
-        };
-        query
+    pub fn build_query(&self) -> Option<Query> {
+        if self.input_field.is_empty() {
+            None
+        } else {
+            Some(Query {
+                text: self.input_field.text.borrow().clone(),
+                filter_mode: self.options.filter_mode
+            })
+        }
     }
 
     pub fn find_next_match(&self) {
@@ -127,6 +130,10 @@ impl InputField {
             *current_text = pending_text;
             QueryState::Changed
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.text.borrow().len() == 0
     }
 
     fn reset(&self) {

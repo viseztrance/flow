@@ -145,7 +145,7 @@ impl Flow {
     fn perform_search(&mut self) {
         let query = self.frame.navigation.search.build_query();
         let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-        self.frame.print(lines_iter, Some(query));
+        self.frame.print(lines_iter, query);
         self.frame.navigation.search.render();
     }
 
