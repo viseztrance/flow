@@ -53,7 +53,7 @@ impl Filter {
         let kind = determine_kind(&starts_with, &contains, &ends_with);
         let last_match = match kind {
             Kind::Content => Match::Contains,
-            _ => Match::EndsWith
+            _ => Match::StartsWith
         };
 
         Filter {
@@ -84,9 +84,9 @@ impl Filter {
     fn handle_start_content_end(&mut self, text: &String) -> bool {
         match self.last_match {
             Match::StartsWith => {
-                let result = self.contains.as_ref().unwrap().is_match(&text);
+                let result = self.ends_with.as_ref().unwrap().is_match(&text);
                 if result {
-                    self.last_match = Match::Contains;
+                    self.last_match = Match::EndsWith;
                 }
                 result
             },
@@ -96,16 +96,16 @@ impl Filter {
                     return result;
                 }
 
-                result = self.ends_with.as_ref().unwrap().is_match(&text);
+                result = self.starts_with.as_ref().unwrap().is_match(&text);
                 if result {
-                    self.last_match = Match::EndsWith
+                    self.last_match = Match::StartsWith
                 }
                 result
             },
             Match::EndsWith => {
-                let result = self.starts_with.as_ref().unwrap().is_match(&text);
+                let result = self.contains.as_ref().unwrap().is_match(&text);
                 if result {
-                    self.last_match = Match::StartsWith;
+                    self.last_match = Match::Contains;
                 }
                 result
             }
@@ -119,16 +119,16 @@ impl Filter {
                 if result {
                     self.last_match = Match::EndsWith;
                 }
-                true
+                result
             },
             Match::EndsWith => {
                 let result = self.starts_with.as_ref().unwrap().is_match(&text);
                 if result {
                     self.last_match = Match::StartsWith;
                 }
-                result
+                true
             },
-            _ => panic!("Unexpected previous match found!")
+            _ => unreachable!("Unexpected previous match found!")
         }
     }
 }

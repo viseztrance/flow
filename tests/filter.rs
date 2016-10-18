@@ -133,7 +133,7 @@ fn having_boundary_constraints_matches_everything_between_the_two() {
         "The end",
     ].into_iter().map(|x| x.to_string());
 
-    let actual = values.filter(|ref x| filter.is_match(&x)).collect::<Vec<_>>();
+    let actual = values.rev().filter(|ref x| filter.is_match(&x)).collect::<Vec<_>>();
     let expected = vec![
         "Once upon a time,",
         "There was a castle",
@@ -144,7 +144,7 @@ fn having_boundary_constraints_matches_everything_between_the_two() {
         "There was a programmer",
         "and was also a laptop.",
         "The end",
-    ].into_iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    ].into_iter().rev().map(|x| x.to_string()).collect::<Vec<_>>();
 
     assert_eq!(expected, actual);
 }
@@ -172,7 +172,7 @@ fn having_boundary_and_content_constraints_matches_content_between_the_end_point
         "The end",
     ].into_iter().map(|x| x.to_string());
 
-    let actual = values.filter(|ref x| filter.is_match(&x)).collect::<Vec<_>>();
+    let actual = values.rev().filter(|ref x| filter.is_match(&x)).collect::<Vec<_>>();
     let expected = vec![
         "Once upon a time,",
         "There was a castle",
@@ -181,7 +181,7 @@ fn having_boundary_and_content_constraints_matches_content_between_the_end_point
         "Once upon a time,",
         "There was a programmer",
         "The end",
-    ].into_iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    ].into_iter().rev().map(|x| x.to_string()).collect::<Vec<_>>();
 
     assert_eq!(expected, actual);
 }

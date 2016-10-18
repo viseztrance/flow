@@ -37,7 +37,7 @@ impl Buffer {
         }
     }
 
-    pub fn parse<'a>(&self, lines: &'a LineCollection) -> (Box<Iterator<Item=&'a Line> + 'a>, usize) {
+    pub fn parse<'a>(&self, lines: &'a LineCollection) -> (Box<DoubleEndedIterator<Item=&'a Line> + 'a>, usize) {
         let mut filter = self.filter.clone();
 
         let parsed_lines = lines.entries.iter().filter(move |line| {
