@@ -16,13 +16,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::cmp::max;
 use std::collections::VecDeque;
+
+use unicode_width::UnicodeWidthStr;
 
 use utils::ansi_decoder::{ComponentCollection, AnsiStr};
 
 pub struct Line {
     pub content_without_ansi: String,
-    pub components: Option<ComponentCollection>
+    pub components: Option<ComponentCollection>,
+    pub width: usize
 }
 
 impl Line {
@@ -36,9 +40,14 @@ impl Line {
         };
 
         Line {
+            width: content_without_ansi.width(),
             content_without_ansi: content_without_ansi,
             components: components
         }
+    }
+
+    pub fn guess_height(&self, container_width: usize) -> usize {
+        max(1, self.width / container_width)
     }
 }
 

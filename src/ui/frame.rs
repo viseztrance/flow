@@ -31,7 +31,7 @@ use ui::content::Content;
 use ui::printer::Print;
 use ui::search::Query;
 
-static MAX_SCROLLING_LINES: i32 = 15_000;
+static MAX_LINES_RENDERED: usize = 2_000;
 
 pub struct Frame {
     pub plane: Plane,
@@ -64,7 +64,7 @@ impl Frame {
 
         Frame {
             navigation: Navigation::new(plane.height - 1, 0, menu_item_names),
-            content: Content::new(MAX_SCROLLING_LINES, plane.width),
+            content: Content::new(plane.width),
             plane: plane
         }
     }
@@ -73,7 +73,6 @@ impl Frame {
         readline::render("Search:", self.navigation.search.input_field.window);
 
         self.navigation.render();
-        self.content.render();
     }
 
     pub fn select_left_menu_item(&self) {
@@ -93,11 +92,11 @@ impl Frame {
     pub fn resize(&mut self) {
         self.plane.resize();
 
-        self.content.resize(MAX_SCROLLING_LINES, self.plane.width);
+        self.content.resize(self.plane.width);
         self.navigation.resize(0, self.plane.height - 1);
     }
 
-    pub fn print<'a>(&mut self, data: (Box<Iterator<Item=&'a Line> + 'a>, usize), query_opt: Option<Query>) {
+    pub fn print<'a>(&mut self, data: (Box<DoubleEndedIterator<Item=&'a Line> + 'a>, usize), query_opt: Option<Query>) {
         let (lines, scroll_offset) = data;
 
         LinesPrinter::new(self, lines).draw(query_opt);
@@ -105,7 +104,7 @@ impl Frame {
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset =  self.plane.virtual_height() - self.plane.height + 1 - reversed_offset;
+        let offset = self.plane.virtual_height() - self.plane.height + 1 - reversed_offset;
         prefresh(self.content.window, offset, 0, 0, 0, self.plane.height - 2, self.plane.width);
     }
 
@@ -116,13 +115,13 @@ impl Frame {
 }
 
 struct LinesPrinter<'a> {
-    lines: Option<Box<Iterator<Item=&'a Line> + 'a>>,
+    lines: Option<Box<DoubleEndedIterator<Item=&'a Line> + 'a>>,
     frame: &'a mut Frame,
     height: i32
 }
 
 impl<'a> LinesPrinter<'a> {
-    pub fn new(frame: &'a mut Frame, lines: Box<Iterator<Item=&'a Line> + 'a>) -> LinesPrinter<'a> {
+    pub fn new(frame: &'a mut Frame, lines: Box<DoubleEndedIterator<Item=&'a Line> + 'a>) -> LinesPrinter<'a> {
         LinesPrinter {
             frame: frame,
             lines: Some(lines),
@@ -131,37 +130,63 @@ impl<'a> LinesPrinter<'a> {
     }
 
     pub fn draw(&mut self, query_opt: Option<Query>) {
+        self.reset();
+
+        if let Some(ref query) = query_opt {
+            self.handle_print_with_search(query);
+        } else {
+            self.handle_print();
+        }
+    }
+
+    fn reset(&mut self) {
         self.frame.content.clear();
         self.frame.plane.lines.clear();
         self.frame.navigation.search.matches_found = false;
         self.height = 0;
+    }
 
-        if let Some(ref query) = query_opt {
-            for line in self.lines.take().unwrap() {
-                let is_match = line.content_without_ansi.contains(&query.text);
+    fn handle_print(&mut self) {
+        let mut estimated_height = 0;
 
-                if !query.filter_mode || (query.filter_mode && is_match) {
-                    let height = self.frame.content.calculate_height_change(||{
-                        line.print(&self.frame.content);
-                    });
+        let lines = self.lines.take().unwrap().rev().take_while(|line| {
+            estimated_height += line.guess_height(self.frame.plane.width as usize);
+            estimated_height <= MAX_LINES_RENDERED
+        }).collect::<Vec<_>>();
 
-                    if is_match {
-                        self.frame.navigation.search.matches_found = true;
-                        self.highlight(line, query, height);
-                    }
+        for line in lines.into_iter().rev() {
+            let actual_height = self.frame.content.calculate_height_change(|| {
+                line.print(&self.frame.content);
+            });
 
-                    self.height += height;
-                    self.frame.plane.lines.push(height);
-                }
+            self.height += actual_height;
+            self.frame.plane.lines.push(actual_height as i32);
+        }
+    }
+
+    fn handle_print_with_search(&mut self, query: &Query) {
+        let mut estimated_height = 0;
+
+        let lines = self.lines.take().unwrap().rev().filter(|line| {
+            !query.filter_mode || (query.filter_mode && line.content_without_ansi.contains(&query.text))
+        }).take_while(|line| {
+            estimated_height += line.guess_height(self.frame.plane.width as usize);
+            estimated_height <= MAX_LINES_RENDERED
+        }).collect::<Vec<_>>();
+
+        for line in lines.into_iter().rev() {
+            let actual_height = self.frame.content.calculate_height_change(|| {
+                line.print(&self.frame.content);
+            });
+
+            let is_match = query.filter_mode || line.content_without_ansi.contains(&query.text);
+            if is_match {
+                self.frame.navigation.search.matches_found = true;
+                self.highlight(line, query, actual_height);
             }
-        } else {
-            for line in self.lines.take().unwrap() {
-                let height = self.frame.content.calculate_height_change(||{
-                    line.print(&self.frame.content);
-                });
-                self.height += height;
-                self.frame.plane.lines.push(height);
-            }
+
+            self.height += actual_height;
+            self.frame.plane.lines.push(actual_height as i32);
         }
     }
 

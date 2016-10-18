@@ -22,29 +22,27 @@ use ncurses::*;
 
 use ui::color::COLOR_DEFAULT;
 
+static WINDOW_HEIGHT: i32 = 2500;
+
 pub struct Content {
     pub window: WINDOW,
     pub state: RefCell<State>
 }
 
 impl Content {
-    pub fn new(width: i32, height: i32) -> Content {
+    pub fn new(width: i32) -> Content {
         Content {
-            window: newpad(width, height),
+            window: newpad(WINDOW_HEIGHT, width),
             state: RefCell::new(State::default())
         }
-    }
-
-    pub fn render(&self) {
-        // scrollok(self.window, true);
     }
 
     pub fn clear(&self) {
         wclear(self.window);
     }
 
-    pub fn resize(&self, width: i32, height: i32) {
-        wresize(self.window, width, height);
+    pub fn resize(&self, width: i32) {
+        wresize(self.window, WINDOW_HEIGHT, width);
         wrefresh(self.window);
     }
 
