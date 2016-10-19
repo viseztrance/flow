@@ -63,7 +63,6 @@ impl Flow {
     }
 
     pub fn process(&mut self, lines: Arc<Mutex<Vec<String>>>) {
-        // TODO: move things into a dispatcher object
         while running!() {
             match self.frame.watch() {
                 Event::SelectMenuItem(direction) => self.select_menu_item(direction),
@@ -106,14 +105,14 @@ impl Flow {
 
     fn scroll(&mut self, offset: Offset) {
         let mut buffer = self.current_buffer().borrow_mut();
-        let max_value = self.frame.plane.virtual_height() - self.frame.plane.height;
+        let max_value = self.frame.rendered_lines_height - self.frame.height;
 
         match offset {
             Offset::Line(value) => {
                 buffer.adjust_reverse_index(value, max_value);
             },
             Offset::Viewport(value) => {
-                buffer.adjust_reverse_index(value * self.frame.plane.height - 4, max_value);
+                buffer.adjust_reverse_index(value * self.frame.height - 4, max_value);
             },
             Offset::Top => {
                 buffer.reverse_index = max_value as usize;
@@ -153,13 +152,13 @@ impl Flow {
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
-        let initial_height = self.frame.plane.virtual_height();
+        let initial_height = self.frame.rendered_lines_height;
 
         self.lines.extend(pending_lines);
 
         self.reset_view();
         if self.current_buffer().borrow().is_scrolled() {
-            let offset = self.frame.plane.virtual_height() - initial_height;
+            let offset = self.frame.rendered_lines_height - initial_height;
             self.scroll(Offset::Line(offset));
         }
 
@@ -167,9 +166,9 @@ impl Flow {
     }
 
     fn reset_view(&mut self) {
-        let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-        self.frame.print(lines_iter, None);
-        self.frame.scroll(self.current_buffer().borrow().reverse_index as i32);
+        let buffer = self.buffer_collection.selected_item().borrow();
+        self.frame.print(&mut buffer.with_lines(&self.lines), None);
+        self.frame.scroll(buffer.reverse_index as i32);
     }
 
     fn reset_scroll(&self) {
@@ -181,9 +180,9 @@ impl Flow {
     }
 
     fn perform_search(&mut self) {
+        let buffer = self.buffer_collection.selected_item().borrow();
         let query = self.frame.navigation.search.build_query();
-        let lines_iter = self.current_buffer().borrow().parse(&self.lines);
-        self.frame.print(lines_iter, query);
+        self.frame.print(&mut buffer.with_lines(&self.lines), query);
         self.frame.navigation.search.render();
     }
 

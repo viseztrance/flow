@@ -21,20 +21,20 @@ use unicode_width::UnicodeWidthStr;
 use ncurses::*;
 
 use core::line::Line;
+use core::buffer::BufferLines;
 use ui::readline;
 use ui::color;
 use ui::input::read_key;
 use ui::event::{EventBuilder, Event};
 use ui::navigation::Navigation;
-use ui::plane::Plane;
 use ui::content::Content;
 use ui::printer::Print;
 use ui::search::Query;
 
-static MAX_LINES_RENDERED: usize = 2_000;
-
 pub struct Frame {
-    pub plane: Plane,
+    pub width: i32,
+    pub height: i32,
+    pub rendered_lines_height: i32,
     pub navigation: Navigation,
     pub content: Content
 }
@@ -60,12 +60,13 @@ impl Frame {
         init_pair(3, COLOR_YELLOW, COLOR_BLUE);
         init_pair(4, COLOR_WHITE, COLOR_MAGENTA);
         color::generate_pairs();
-        let plane = Plane::new();
 
         Frame {
-            navigation: Navigation::new(plane.height - 1, 0, menu_item_names),
-            content: Content::new(plane.width),
-            plane: plane
+            width: COLS,
+            height: LINES,
+            rendered_lines_height: 0,
+            navigation: Navigation::new(LINES - 1, 0, menu_item_names),
+            content: Content::new(COLS)
         }
     }
 
@@ -90,22 +91,22 @@ impl Frame {
     }
 
     pub fn resize(&mut self) {
-        self.plane.resize();
+        getmaxyx(stdscr, &mut self.height, &mut self.width);
 
-        self.content.resize(self.plane.width);
-        self.navigation.resize(0, self.plane.height - 1);
+        self.content.resize(self.width);
+        self.navigation.resize(0, self.height - 1);
     }
 
-    pub fn print<'a>(&mut self, data: (Box<DoubleEndedIterator<Item=&'a Line> + 'a>, usize), query_opt: Option<Query>) {
-        let (lines, scroll_offset) = data;
+    pub fn print<'a>(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
+        buffer_lines.set_context(self.width as usize, query);
 
-        LinesPrinter::new(self, lines).draw(query_opt);
-        self.scroll(scroll_offset as i32);
+        LinesPrinter::new(self, buffer_lines).draw();
+        self.scroll(buffer_lines.buffer.reverse_index as i32);
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset = self.plane.virtual_height() - self.plane.height + 1 - reversed_offset;
-        prefresh(self.content.window, offset, 0, 0, 0, self.plane.height - 2, self.plane.width);
+        let offset = self.rendered_lines_height - self.height + 1 - reversed_offset;
+        prefresh(self.content.window, offset, 0, 0, 0, self.height - 2, self.width);
     }
 
     pub fn watch(&self) -> Event {
@@ -115,66 +116,53 @@ impl Frame {
 }
 
 struct LinesPrinter<'a> {
-    lines: Option<Box<DoubleEndedIterator<Item=&'a Line> + 'a>>,
     frame: &'a mut Frame,
-    height: i32
+    height: i32,
+    buffer_lines: &'a BufferLines<'a>,
+    rendered_lines: Vec<RenderedLine>
 }
 
 impl<'a> LinesPrinter<'a> {
-    pub fn new(frame: &'a mut Frame, lines: Box<DoubleEndedIterator<Item=&'a Line> + 'a>) -> LinesPrinter<'a> {
+    pub fn new(frame: &'a mut Frame, lines: &'a BufferLines<'a>) -> LinesPrinter<'a> {
         LinesPrinter {
             frame: frame,
-            lines: Some(lines),
-            height: 0
+            height: 0,
+            rendered_lines: vec![],
+            buffer_lines: lines
         }
     }
 
-    pub fn draw(&mut self, query_opt: Option<Query>) {
-        self.reset();
+    pub fn draw(&mut self) {
+        self.frame.content.clear();
+        self.frame.navigation.search.matches_found = false;
+        self.height = 0;
 
-        if let Some(ref query) = query_opt {
+        if let Some(ref query) = self.buffer_lines.query {
             self.handle_print_with_search(query);
         } else {
             self.handle_print();
         }
+
+        self.frame.rendered_lines_height = self.rendered_lines_height() as i32;
     }
 
-    fn reset(&mut self) {
-        self.frame.content.clear();
-        self.frame.plane.lines.clear();
-        self.frame.navigation.search.matches_found = false;
-        self.height = 0;
+    fn rendered_lines_height(&self) -> usize {
+        self.rendered_lines.iter().map(|line| line.height).sum()
     }
 
     fn handle_print(&mut self) {
-        let mut estimated_height = 0;
-
-        let lines = self.lines.take().unwrap().rev().take_while(|line| {
-            estimated_height += line.guess_height(self.frame.plane.width as usize);
-            estimated_height <= MAX_LINES_RENDERED
-        }).collect::<Vec<_>>();
-
-        for line in lines.into_iter().rev() {
+        for line in self.buffer_lines {
             let actual_height = self.frame.content.calculate_height_change(|| {
                 line.print(&self.frame.content);
             });
 
             self.height += actual_height;
-            self.frame.plane.lines.push(actual_height as i32);
+            self.rendered_lines.push(RenderedLine::new(actual_height as usize, false));
         }
     }
 
     fn handle_print_with_search(&mut self, query: &Query) {
-        let mut estimated_height = 0;
-
-        let lines = self.lines.take().unwrap().rev().filter(|line| {
-            !query.filter_mode || (query.filter_mode && line.content_without_ansi.contains(&query.text))
-        }).take_while(|line| {
-            estimated_height += line.guess_height(self.frame.plane.width as usize);
-            estimated_height <= MAX_LINES_RENDERED
-        }).collect::<Vec<_>>();
-
-        for line in lines.into_iter().rev() {
+        for line in self.buffer_lines {
             let actual_height = self.frame.content.calculate_height_change(|| {
                 line.print(&self.frame.content);
             });
@@ -186,7 +174,7 @@ impl<'a> LinesPrinter<'a> {
             }
 
             self.height += actual_height;
-            self.frame.plane.lines.push(actual_height as i32);
+            self.rendered_lines.push(RenderedLine::new(actual_height as usize, is_match));
         }
     }
 
@@ -195,15 +183,29 @@ impl<'a> LinesPrinter<'a> {
         for (i, value) in matches {
             let mut offset_x = i as i32;
             let mut offset_y  = self.height;
-            if offset_x > self.frame.plane.width {
+            if offset_x > self.frame.width {
                 offset_x = line.content_without_ansi.split_at(i).0.width() as i32;
-                offset_y = (offset_x / self.frame.plane.width) + offset_y;
-                offset_x = offset_x % self.frame.plane.width;
+                offset_y = (offset_x / self.frame.width) + offset_y;
+                offset_x = offset_x % self.frame.width;
             }
             wattron(self.frame.content.window, A_STANDOUT());
             mvwprintw(self.frame.content.window, offset_y, offset_x, value);
             wattroff(self.frame.content.window, A_STANDOUT());
         }
         wmove(self.frame.content.window, self.height + height, 0);
+    }
+}
+
+pub struct RenderedLine {
+    height: usize,
+    highlighted: bool
+}
+
+impl RenderedLine {
+    fn new(height: usize, highlighted: bool) -> RenderedLine {
+        RenderedLine {
+            height: height,
+            highlighted: highlighted
+        }
     }
 }

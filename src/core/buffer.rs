@@ -21,8 +21,10 @@ use std::cell::RefCell;
 
 use core::line::{Line, LineCollection};
 use core::filter::Filter;
+use ui::search::Query;
 
 static DEFAULT_REVERSE_INDEX: usize = 0;
+static MAX_LINES_RENDERED: usize = 2_000;
 
 pub struct Buffer {
     pub filter: Filter,
@@ -37,13 +39,8 @@ impl Buffer {
         }
     }
 
-    pub fn parse<'a>(&self, lines: &'a LineCollection) -> (Box<DoubleEndedIterator<Item=&'a Line> + 'a>, usize) {
-        let mut filter = self.filter.clone();
-
-        let parsed_lines = lines.entries.iter().filter(move |line| {
-            filter.is_match(&line.content_without_ansi)
-        });
-        (Box::new(parsed_lines), self.reverse_index)
+    pub fn with_lines<'a>(&'a self, lines: &'a LineCollection) -> BufferLines<'a> {
+        BufferLines::new(&self, lines)
     }
 
     pub fn adjust_reverse_index(&mut self, value: i32, max_value: i32) {
@@ -57,6 +54,65 @@ impl Buffer {
 
     pub fn reset_reverse_index(&mut self) {
         self.reverse_index = DEFAULT_REVERSE_INDEX;
+    }
+}
+
+pub struct BufferLines<'a> {
+    lines: &'a LineCollection,
+    pub buffer: &'a Buffer,
+    pub width: Option<usize>,
+    pub query: Option<Query>
+}
+
+impl<'a> BufferLines<'a> {
+    fn new(buffer: &'a Buffer, lines: &'a LineCollection) -> BufferLines<'a> {
+        BufferLines {
+            buffer: buffer,
+            lines: lines,
+            width: None,
+            query: None
+        }
+    }
+
+    pub fn set_context(&mut self, width: usize, query: Option<Query>) {
+        self.width = Some(width);
+        self.query = query;
+    }
+}
+
+impl<'a> IntoIterator for &'a BufferLines<'a> {
+    type Item = &'a Line;
+    type IntoIter = ::std::vec::IntoIter<&'a Line>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let width = self.width.unwrap();
+        let mut filter = self.buffer.filter.clone();
+        let mut estimated_height = 0;
+
+        let height_within_boundary = |line: &&Line| -> bool {
+            estimated_height += line.guess_height(width);
+            estimated_height <= MAX_LINES_RENDERED
+        };
+
+        let lines_iter = self.lines.entries.iter().filter(|line| {
+            filter.is_match(&line.content_without_ansi)
+        }).rev();
+
+        let mut lines = match self.query {
+            Some(ref value) => {
+                lines_iter
+                    .filter(|line| {
+                        !value.filter_mode ||
+                            (value.filter_mode && line.content_without_ansi.contains(&value.text))
+                    })
+                    .take_while(height_within_boundary).collect::<Vec<_>>()
+
+            },
+            None => lines_iter.take_while(height_within_boundary).collect::<Vec<_>>()
+        };
+
+        lines.reverse();
+        lines.into_iter()
     }
 }
 

@@ -17,7 +17,6 @@
  */
 
 pub mod frame;
-pub mod plane;
 pub mod content;
 pub mod navigation;
 pub mod menu;
