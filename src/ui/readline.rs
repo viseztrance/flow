@@ -17,7 +17,7 @@
  */
 
 use libc::{FILE, free, c_void, c_char};
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use ncurses::*;
 use unicode_width::UnicodeWidthStr;
 use unicode_segmentation::UnicodeSegmentation;
@@ -49,8 +49,9 @@ pub fn init() {
 pub fn render(prompt: &str, window: WINDOW) {
     unsafe {
         command_window = Some(window);
+        let prompt_ptr = CString::new(prompt).unwrap().as_ptr();
 
-        rl_callback_handler_install(prompt.as_ptr() as (*const i8), Some(handle_input));
+        rl_callback_handler_install(prompt_ptr, Some(handle_input));
     }
 }
 
@@ -96,7 +97,7 @@ pub fn move_cursor() {
             .collect::<String>()
             .width();
         curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
-        wmove(window, 0, (prompt.len() + 1 + cursor_position) as i32);
+        wmove(window, 0, (prompt.width() + 1 + cursor_position) as i32);
         wrefresh(window);
     }
 }
