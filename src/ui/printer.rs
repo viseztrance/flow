@@ -16,12 +16,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use unicode_width::UnicodeWidthStr;
+
 use ncurses::*;
 
 use core::line::Line;
+use core::buffer::BufferLines;
 use utils::ansi_decoder::{Component, Style};
+use ui::frame::Frame;
 use ui::color::ColorPair;
 use ui::content::Content;
+use ui::search::Query;
 
 pub trait Print {
     fn print(&self, content: &Content);
@@ -89,6 +94,101 @@ impl Print for Style {
 
                 wattron(content.window, ColorPair::default().to_attr());
             }
+        }
+    }
+}
+
+pub struct LinesPrinter<'a> {
+    frame: &'a mut Frame,
+    height: i32,
+    buffer_lines: &'a BufferLines<'a>,
+    rendered_lines: Vec<RenderedLine>
+}
+
+impl<'a> LinesPrinter<'a> {
+    pub fn new(frame: &'a mut Frame, lines: &'a BufferLines<'a>) -> LinesPrinter<'a> {
+        LinesPrinter {
+            frame: frame,
+            height: 0,
+            rendered_lines: vec![],
+            buffer_lines: lines
+        }
+    }
+
+    pub fn draw(&mut self) {
+        self.frame.content.clear();
+        self.frame.navigation.search.matches_found = false;
+        self.height = 0;
+
+        if let Some(ref query) = self.buffer_lines.query {
+            self.handle_print_with_search(query);
+        } else {
+            self.handle_print();
+        }
+
+        self.frame.rendered_lines_height = self.rendered_lines_height() as i32;
+    }
+
+    fn rendered_lines_height(&self) -> usize {
+        self.rendered_lines.iter().map(|line| line.height).sum()
+    }
+
+    fn handle_print(&mut self) {
+        for line in self.buffer_lines {
+            let actual_height = self.frame.content.calculate_height_change(|| {
+                line.print(&self.frame.content);
+            });
+
+            self.height += actual_height;
+            self.rendered_lines.push(RenderedLine::new(actual_height as usize, false));
+        }
+    }
+
+    fn handle_print_with_search(&mut self, query: &Query) {
+        for line in self.buffer_lines {
+            let actual_height = self.frame.content.calculate_height_change(|| {
+                line.print(&self.frame.content);
+            });
+
+            let is_match = query.filter_mode || line.content_without_ansi.contains(&query.text);
+            if is_match {
+                self.frame.navigation.search.matches_found = true;
+                self.highlight(line, query, actual_height);
+            }
+
+            self.height += actual_height;
+            self.rendered_lines.push(RenderedLine::new(actual_height as usize, is_match));
+        }
+    }
+
+    fn highlight(&self, line: &Line, query: &Query, height: i32) {
+        let matches: Vec<_> = line.content_without_ansi.match_indices(&query.text).collect();
+        for (i, value) in matches {
+            let mut offset_x = i as i32;
+            let mut offset_y  = self.height;
+            if offset_x > self.frame.width {
+                offset_x = line.content_without_ansi.split_at(i).0.width() as i32;
+                offset_y = (offset_x / self.frame.width) + offset_y;
+                offset_x = offset_x % self.frame.width;
+            }
+            wattron(self.frame.content.window, A_STANDOUT());
+            mvwprintw(self.frame.content.window, offset_y, offset_x, value);
+            wattroff(self.frame.content.window, A_STANDOUT());
+        }
+        wmove(self.frame.content.window, self.height + height, 0);
+    }
+}
+
+pub struct RenderedLine {
+    height: usize,
+    highlighted: bool
+}
+
+impl RenderedLine {
+    fn new(height: usize, highlighted: bool) -> RenderedLine {
+        RenderedLine {
+            height: height,
+            highlighted: highlighted
         }
     }
 }
