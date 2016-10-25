@@ -49,6 +49,14 @@ impl Line {
     pub fn guess_height(&self, container_width: usize) -> usize {
         max(1, self.width / container_width)
     }
+
+    pub fn matches_for(&self, text: &str) -> Vec<(usize, &str)> {
+        self.content_without_ansi.match_indices(text).collect()
+    }
+
+    pub fn contains(&self, text: &str) -> bool {
+        self.content_without_ansi.contains(text)
+    }
 }
 
 pub struct LineCollection {

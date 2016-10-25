@@ -26,9 +26,16 @@ static OPTIONS_WIDTH: i32 = 29;
 static WITH_MATCHES_COLOR_PAIR_ID: i16 = 1;
 static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
 
+pub enum Highlight {
+    FirstVisibleOrLast,
+    Next,
+    Previous
+}
+
 pub struct Query {
     pub text: String,
-    pub filter_mode: bool
+    pub filter_mode: bool,
+    pub highlight: Highlight
 }
 
 pub struct Search {
@@ -62,23 +69,16 @@ impl Search {
         readline::move_cursor();
     }
 
-    pub fn build_query(&self) -> Option<Query> {
+    pub fn build_query(&self, highlight: Highlight) -> Option<Query> {
         if self.input_field.is_empty() {
             None
         } else {
             Some(Query {
                 text: self.input_field.text.borrow().clone(),
-                filter_mode: self.options.filter_mode
+                filter_mode: self.options.filter_mode,
+                highlight: highlight
             })
         }
-    }
-
-    pub fn find_next_match(&self) {
-        // unimplemented!();
-    }
-
-    pub fn find_previous_match(&self) {
-        // unimplemented!();
     }
 
     pub fn toggle_filter_mode(&mut self) {

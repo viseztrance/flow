@@ -25,7 +25,7 @@ use utils::settings::Settings;
 use ui::frame::Frame;
 use ui::event::{Event, Direction, SearchAction, Offset};
 use ui::navigation::State as NavigationState;
-use ui::search::State as QueryState;
+use ui::search::{State as QueryState, Highlight};
 
 use core::runner::RUNNING;
 use core::line::LineCollection;
@@ -129,18 +129,18 @@ impl Flow {
         match action {
             SearchAction::ReadInput(keys) => {
                 if self.frame.navigation.search.input_field.read(keys) == QueryState::Changed {
-                    self.perform_search();
+                    self.perform_search(Highlight::FirstVisibleOrLast);
                 }
             },
             SearchAction::FindNextMatch => {
-                self.frame.navigation.search.find_next_match();
+                self.perform_search(Highlight::Next);
             },
             SearchAction::FindPreviousMatch => {
-                self.frame.navigation.search.find_previous_match();
+                self.perform_search(Highlight::Previous);
             },
             SearchAction::ToggleFilterMode => {
                 self.frame.navigation.search.toggle_filter_mode();
-                self.perform_search();
+                self.perform_search(Highlight::FirstVisibleOrLast);
             }
         }
     }
@@ -179,9 +179,9 @@ impl Flow {
         self.buffer_collection.selected_item()
     }
 
-    fn perform_search(&mut self) {
+    fn perform_search(&mut self, highlight: Highlight) {
         let buffer = self.buffer_collection.selected_item().borrow();
-        let query = self.frame.navigation.search.build_query();
+        let query = self.frame.navigation.search.build_query(highlight);
         self.frame.print(&mut buffer.with_lines(&self.lines), query);
         self.frame.navigation.search.render();
     }

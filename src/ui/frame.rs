@@ -28,6 +28,9 @@ use ui::content::Content;
 use ui::printer::LinesPrinter;
 use ui::search::Query;
 
+pub static NORMAL_HIGHLIGHT_COLOR: i16 = 5;
+pub static CURRENT_HIGHLIGHT_COLOR: i16 = 6;
+
 pub struct Frame {
     pub width: i32,
     pub height: i32,
@@ -56,6 +59,9 @@ impl Frame {
         init_pair(2, COLOR_BLACK, COLOR_YELLOW);
         init_pair(3, COLOR_YELLOW, COLOR_BLUE);
         init_pair(4, COLOR_WHITE, COLOR_MAGENTA);
+        init_pair(5, COLOR_BLACK, COLOR_WHITE);
+        init_pair(6, COLOR_BLACK, COLOR_YELLOW);
+
         color::generate_pairs();
 
         Frame {

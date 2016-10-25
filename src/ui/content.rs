@@ -64,7 +64,9 @@ impl Content {
 pub struct State {
     pub attributes: Vec<(usize, fn() -> u64)>,
     pub foreground: i16,
-    pub background: i16
+    pub background: i16,
+    pub highlighted_line: usize,
+    pub highlighted_match: usize
 }
 
 impl State {
@@ -72,16 +74,17 @@ impl State {
         State {
             attributes: vec![],
             foreground: COLOR_DEFAULT,
-            background: COLOR_DEFAULT
+            background: COLOR_DEFAULT,
+            highlighted_line: 0,
+            highlighted_match: 0
         }
     }
 
     pub fn remove_attribute(&mut self, attr_id: usize) {
-        match self.attributes.iter().position(|cur| cur.0 == attr_id) {
-            Some(index) => {
-                self.attributes.remove(index);
-            },
-            _ => {}
+        let index_option = self.attributes.iter().position(|cur| cur.0 == attr_id);
+
+        if let Some(index) = index_option {
+            self.attributes.remove(index);
         }
     }
 }
