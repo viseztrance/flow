@@ -61,7 +61,7 @@ impl Tail {
 
     pub fn read_to_end(&mut self) -> Vec<String> {
         let mut buffer = String::new();
-        &self.file.read_to_string(&mut buffer);
+        let _ = self.file.read_to_string(&mut buffer);
         buffer.lines().map(|x| x.to_string()).collect()
     }
 
@@ -72,7 +72,7 @@ impl Tail {
             self.start_of_file_reached = true;
             seekable_bytes = file_size;
         }
-        &self.file.seek(SeekFrom::End(-(seekable_bytes as i64)));
+        let _ = self.file.seek(SeekFrom::End(-(seekable_bytes as i64)));
         self.read_to_end()
     }
 
@@ -92,7 +92,7 @@ impl Tail {
         }
     }
 
-    fn excess_lines_at_beggining_of_buffer(&self, buffer: &Vec<String>, target_lines: usize) -> Option<usize> {
+    fn excess_lines_at_beggining_of_buffer(&self, buffer: &[String], target_lines: usize) -> Option<usize> {
         let count = buffer.len();
         if count >= target_lines {
             Some(count - target_lines)

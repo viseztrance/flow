@@ -158,9 +158,8 @@ impl EventBuilder {
             },
             Input::Kb(_, ref modifier) => {
                 let mut keys = vec![self.key];
-                match *modifier {
-                    Some(Modifier::Alt(value)) => { keys.push(value) },
-                    _ => {}
+                if let Some(Modifier::Alt(value)) = *modifier {
+                    keys.push(value)
                 };
                 Some(Event::Search(SearchAction::ReadInput(keys)))
             },

@@ -40,7 +40,7 @@ impl Buffer {
     }
 
     pub fn with_lines<'a>(&'a self, lines: &'a LineCollection) -> BufferLines<'a> {
-        BufferLines::new(&self, lines)
+        BufferLines::new(self, lines)
     }
 
     pub fn adjust_reverse_index(&mut self, value: i32, max_value: i32) {

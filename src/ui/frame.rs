@@ -40,7 +40,7 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn new(menu_item_names: &Vec<String>) -> Frame {
+    pub fn new(menu_item_names: Vec<String>) -> Frame {
         ::std::env::set_var("ESCDELAY", "25");
         setlocale(LcCategory::all, ""); // Must be set *before* ncurses init
 
@@ -51,11 +51,11 @@ impl Frame {
         color::generate_pairs();
 
         Frame {
-            width: COLS,
-            height: LINES,
+            width: COLS(),
+            height: LINES(),
             rendered_lines: vec![],
-            navigation: Navigation::new(LINES - 1, 0, menu_item_names),
-            content: Content::new(COLS)
+            navigation: Navigation::new(LINES() - 1, 0, &menu_item_names),
+            content: Content::new(COLS())
         }
     }
 
@@ -80,13 +80,13 @@ impl Frame {
     }
 
     pub fn resize(&mut self) {
-        getmaxyx(stdscr, &mut self.height, &mut self.width);
+        getmaxyx(stdscr(), &mut self.height, &mut self.width);
 
         self.content.resize(self.width);
         self.navigation.resize(0, self.height - 1);
     }
 
-    pub fn print<'a>(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
+    pub fn print(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
         buffer_lines.set_context(self.width as usize, query);
 
         LinesPrinter::new(self, buffer_lines).draw();
@@ -140,7 +140,7 @@ fn ncurses_init() {
     noecho();
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     halfdelay(1);
-    keypad(stdscr, true);
+    keypad(stdscr(), true);
 
     init_pair(1, COLOR_WHITE, COLOR_BLUE);
     init_pair(2, COLOR_BLACK, COLOR_YELLOW);

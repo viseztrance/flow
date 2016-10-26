@@ -26,7 +26,7 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new(position_x: i32, position_y: i32, item_names: &Vec<String>) -> Menu {
+    pub fn new(position_x: i32, position_y: i32, item_names: &[String]) -> Menu {
         let window = newwin(0, 0, position_x, position_y);
 
         let mut items = vec![];

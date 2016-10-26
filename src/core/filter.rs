@@ -66,7 +66,7 @@ impl Filter {
         }
     }
 
-    pub fn is_match(&mut self, text: &String) -> bool {
+    pub fn is_match(&mut self, text: &str) -> bool {
         match self.kind {
             Kind::Content => self.handle_content(text),
             Kind::StartContentEnd => self.handle_start_content_end(text),
@@ -74,36 +74,36 @@ impl Filter {
         }
     }
 
-    fn handle_content(&self, text: &String) -> bool {
+    fn handle_content(&self, text: &str) -> bool {
         match self.contains {
-            Some(ref value) => value.is_match(&text),
+            Some(ref value) => value.is_match(text),
             None => true
         }
     }
 
-    fn handle_start_content_end(&mut self, text: &String) -> bool {
+    fn handle_start_content_end(&mut self, text: &str) -> bool {
         match self.last_match {
             Match::StartsWith => {
-                let result = self.ends_with.as_ref().unwrap().is_match(&text);
+                let result = self.ends_with.as_ref().unwrap().is_match(text);
                 if result {
                     self.last_match = Match::EndsWith;
                 }
                 result
             },
             Match::Contains => {
-                let mut result = self.contains.as_ref().unwrap().is_match(&text);
+                let mut result = self.contains.as_ref().unwrap().is_match(text);
                 if result {
                     return result;
                 }
 
-                result = self.starts_with.as_ref().unwrap().is_match(&text);
+                result = self.starts_with.as_ref().unwrap().is_match(text);
                 if result {
                     self.last_match = Match::StartsWith
                 }
                 result
             },
             Match::EndsWith => {
-                let result = self.contains.as_ref().unwrap().is_match(&text);
+                let result = self.contains.as_ref().unwrap().is_match(text);
                 if result {
                     self.last_match = Match::Contains;
                 }
@@ -112,17 +112,17 @@ impl Filter {
         }
     }
 
-    fn handle_start_end(&mut self, text: &String) -> bool {
+    fn handle_start_end(&mut self, text: &str) -> bool {
         match self.last_match {
             Match::StartsWith => {
-                let result = self.ends_with.as_ref().unwrap().is_match(&text);
+                let result = self.ends_with.as_ref().unwrap().is_match(text);
                 if result {
                     self.last_match = Match::EndsWith;
                 }
                 result
             },
             Match::EndsWith => {
-                let result = self.starts_with.as_ref().unwrap().is_match(&text);
+                let result = self.starts_with.as_ref().unwrap().is_match(text);
                 if result {
                     self.last_match = Match::StartsWith;
                 }

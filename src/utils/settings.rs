@@ -155,7 +155,7 @@ impl ConfigFile {
             }
         };
 
-        let ref mut contents = String::new();
+        let contents = &mut String::new();
         let _ = file_handle.read_to_string(contents);
 
         let parsed_contents =  match toml::Parser::new(contents).parse() {

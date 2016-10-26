@@ -56,7 +56,7 @@ pub enum Input {
 }
 
 pub fn read_key() -> (Input, i32) {
-    let key = wgetch(stdscr);
+    let key = wgetch(stdscr());
 
     let input = match key {
         ERR => Input::None,
@@ -82,7 +82,7 @@ fn parse_key_code(code: i32) -> Input {
     let mut pending = code;
 
     if pending == ESCAPE_CODE {
-        let new_code = wgetch(stdscr);
+        let new_code = wgetch(stdscr());
         if new_code == ERR {
             return Input::Kb(Key::Escape, None)
         }
@@ -90,7 +90,7 @@ fn parse_key_code(code: i32) -> Input {
         modifier = Some(Modifier::Alt(pending));
     } else {
         let name = keyname(pending);
-        if name.contains("^") {
+        if name.contains('^') {
             modifier = Some(Modifier::Ctrl);
             let value = Key::Char(name.chars().last().unwrap());
             return Input::Kb(value, modifier)

@@ -150,7 +150,7 @@ impl<'a> LinesPrinter<'a> {
                 let mut found_matches = 0;
                 if is_match {
                     self.frame.navigation.search.matches_found = true;
-                    let highlighter = LineHighlighter::new(&self.frame, line, NORMAL_HIGHLIGHT_COLOR);
+                    let highlighter = LineHighlighter::new(self.frame, line, NORMAL_HIGHLIGHT_COLOR);
                     found_matches = highlighter.print(&query.text, self.height, actual_height);
                 }
 
@@ -186,8 +186,8 @@ impl<'a> LinesPrinter<'a> {
             .take(state.highlighted_line)
             .map(|line| line.height)
             .sum::<usize>();
-        let highlighter = LineHighlighter::new(&self.frame, line, color);
-        highlighter.print_single_match(&text, state.highlighted_match, accumulated_height as i32);
+        let highlighter = LineHighlighter::new(self.frame, line, color);
+        highlighter.print_single_match(text, state.highlighted_match, accumulated_height as i32);
     }
 }
 
@@ -226,8 +226,8 @@ impl<'a> LineHighlighter<'a> {
     fn handle_match(&self, mut offset_x: i32, mut offset_y: i32, value: &str) {
         if offset_x > self.frame.width {
             offset_x = self.line.content_without_ansi.split_at(offset_x as usize).0.width() as i32;
-            offset_y = (offset_x / self.frame.width) + offset_y;
-            offset_x = offset_x % self.frame.width;
+            offset_y += offset_x / self.frame.width;
+            offset_x %= self.frame.width;
         }
         wattron(self.frame.content.window, COLOR_PAIR(self.color_pair_id));
         mvwprintw(self.frame.content.window, offset_y, offset_x, value);
@@ -237,11 +237,11 @@ impl<'a> LineHighlighter<'a> {
 
 struct HighlightState<'a> {
     state: RefMut<'a, ContentState>,
-    rendered_lines: &'a Vec<RenderedLine>
+    rendered_lines: &'a [RenderedLine]
 }
 
 impl<'a> HighlightState<'a> {
-    fn new(state: RefMut<'a, ContentState>, rendered_lines: &'a Vec<RenderedLine>) -> HighlightState<'a> {
+    fn new(state: RefMut<'a, ContentState>, rendered_lines: &'a [RenderedLine]) -> HighlightState<'a> {
         HighlightState {
             state: state,
             rendered_lines: rendered_lines,
@@ -270,7 +270,7 @@ impl<'a> HighlightState<'a> {
     }
 
     fn handle_next(&mut self) {
-        let ref rendered_line = self.rendered_lines[self.state.highlighted_line];
+        let rendered_line = &self.rendered_lines[self.state.highlighted_line];
         if self.state.highlighted_match < rendered_line.found_matches - 1 {
             self.state.highlighted_match += 1;
         } else {

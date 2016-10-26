@@ -48,7 +48,7 @@ impl Flow {
             .collect();
 
         Flow {
-            frame: Frame::new(&menu_item_names),
+            frame: Frame::new(menu_item_names),
             lines: LineCollection::new(settings.values.max_lines_count),
             buffer_collection: BufferCollection::from_filters(settings.config_file.filters)
         }

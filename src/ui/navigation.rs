@@ -34,7 +34,7 @@ pub struct Navigation {
 }
 
 impl Navigation {
-    pub fn new(position_x: i32, position_y: i32, menu_item_names: &Vec<String>) -> Navigation {
+    pub fn new(position_x: i32, position_y: i32, menu_item_names: &[String]) -> Navigation {
         Navigation {
             menu: Menu::new(position_x, position_y, menu_item_names),
             search: Search::new(position_x, position_y),

@@ -83,10 +83,9 @@ impl ComponentCollection {
 
         for capture in BREAK_ANSI_MATCHER.captures_iter(value) {
             if capture.at(1).is_some() {
-                match ANSI_TO_NCURSES_MAPPING.get(capture.at(1).unwrap()) {
-                    Some(style) => components.push(Component::Style(style)),
-                    _ => {}
-                };
+                if let Some(style) = ANSI_TO_NCURSES_MAPPING.get(capture.at(1).unwrap()) {
+                    components.push(Component::Style(style))
+                }
             }
             if capture.at(2).is_some() {
                 let content = capture.at(2).unwrap().to_string();

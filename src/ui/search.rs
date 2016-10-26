@@ -120,7 +120,7 @@ pub struct InputField {
 
 impl InputField {
     fn new(parent_window: WINDOW) -> InputField {
-        let window = derwin(parent_window, 1, COLS - OPTIONS_WIDTH, 0, 1);
+        let window = derwin(parent_window, 1, COLS() - OPTIONS_WIDTH, 0, 1);
         syncok(window, true);
 
         InputField {
@@ -169,7 +169,7 @@ pub struct Options {
 impl Options {
     fn new(parent_window: WINDOW) -> Options {
         Options {
-            window: derwin(parent_window, 1, OPTIONS_WIDTH, 0, COLS - OPTIONS_WIDTH),
+            window: derwin(parent_window, 1, OPTIONS_WIDTH, 0, COLS() - OPTIONS_WIDTH),
             filter_mode: false
         }
     }

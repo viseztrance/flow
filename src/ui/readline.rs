@@ -49,9 +49,9 @@ pub fn init() {
 pub fn render(prompt: &str, window: WINDOW) {
     unsafe {
         command_window = Some(window);
-        let prompt_ptr = CString::new(prompt).unwrap().as_ptr();
+        let prompt_cstring = CString::new(prompt).unwrap();
 
-        rl_callback_handler_install(prompt_ptr, Some(handle_input));
+        rl_callback_handler_install(prompt_cstring.as_ptr(), Some(handle_input));
     }
 }
 
