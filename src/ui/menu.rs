@@ -32,7 +32,7 @@ impl Menu {
         let mut items = vec![];
 
         for name in item_names {
-            items.push(new_item(name.as_str(), ""));
+            items.push(new_item(format!(" {} ", name), String::new()));
         }
 
         Menu {
