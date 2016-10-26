@@ -26,6 +26,7 @@ static OPTIONS_WIDTH: i32 = 29;
 static WITH_MATCHES_COLOR_PAIR_ID: i16 = 1;
 static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
 
+#[derive(PartialEq)]
 pub enum Highlight {
     FirstVisibleOrLast,
     Next,

@@ -105,7 +105,7 @@ impl Flow {
 
     fn scroll(&mut self, offset: Offset) {
         let mut buffer = self.current_buffer().borrow_mut();
-        let max_value = self.frame.rendered_lines_height - self.frame.height;
+        let max_value = self.frame.rendered_lines_height() as i32 - self.frame.height;
 
         match offset {
             Offset::Line(value) => {
@@ -152,14 +152,14 @@ impl Flow {
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
-        let initial_height = self.frame.rendered_lines_height;
+        let initial_height = self.frame.rendered_lines_height();
 
         self.lines.extend(pending_lines);
 
         self.reset_view();
         if self.current_buffer().borrow().is_scrolled() {
-            let offset = self.frame.rendered_lines_height - initial_height;
-            self.scroll(Offset::Line(offset));
+            let offset = self.frame.rendered_lines_height() - initial_height;
+            self.scroll(Offset::Line(offset as i32));
         }
 
         self.lines.clear_excess();

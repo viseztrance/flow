@@ -34,7 +34,7 @@ pub static CURRENT_HIGHLIGHT_COLOR: i16 = 6;
 pub struct Frame {
     pub width: i32,
     pub height: i32,
-    pub rendered_lines_height: i32,
+    pub rendered_lines: Vec<RenderedLine>,
     pub navigation: Navigation,
     pub content: Content
 }
@@ -46,28 +46,14 @@ impl Frame {
 
         readline::init();
 
-        initscr();
-        start_color();
-        use_default_colors();
-        cbreak();
-        noecho();
-        curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-        halfdelay(1);
-        keypad(stdscr, true);
-
-        init_pair(1, COLOR_WHITE, COLOR_BLUE);
-        init_pair(2, COLOR_BLACK, COLOR_YELLOW);
-        init_pair(3, COLOR_YELLOW, COLOR_BLUE);
-        init_pair(4, COLOR_WHITE, COLOR_MAGENTA);
-        init_pair(5, COLOR_BLACK, COLOR_WHITE);
-        init_pair(6, COLOR_BLACK, COLOR_YELLOW);
+        ncurses_init();
 
         color::generate_pairs();
 
         Frame {
             width: COLS,
             height: LINES,
-            rendered_lines_height: 0,
+            rendered_lines: vec![],
             navigation: Navigation::new(LINES - 1, 0, menu_item_names),
             content: Content::new(COLS)
         }
@@ -108,7 +94,7 @@ impl Frame {
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset = self.rendered_lines_height - self.height + 1 - reversed_offset;
+        let offset = self.rendered_lines_height() as i32 - self.height + 1 - reversed_offset;
         prefresh(self.content.window, offset, 0, 0, 0, self.height - 2, self.width);
     }
 
@@ -116,4 +102,50 @@ impl Frame {
         let (input, key) = read_key();
         EventBuilder::new(input, key).construct(&self.navigation.state)
     }
+
+    pub fn reset(&mut self) {
+        self.rendered_lines.clear();
+        self.content.clear();
+        self.navigation.search.matches_found = false;
+    }
+
+    pub fn create_rendered_line(&mut self, height: usize, found_matches: usize) {
+        self.rendered_lines.push(RenderedLine::new(height, found_matches));
+    }
+
+    pub fn rendered_lines_height(&self) -> usize {
+        self.rendered_lines.iter().map(|line| line.height).sum()
+    }
+}
+
+pub struct RenderedLine {
+    pub height: usize,
+    pub found_matches: usize
+}
+
+impl RenderedLine {
+    fn new(height: usize, found_matches: usize) -> RenderedLine {
+        RenderedLine {
+            height: height,
+            found_matches: found_matches
+        }
+    }
+}
+
+fn ncurses_init() {
+    initscr();
+    start_color();
+    use_default_colors();
+    cbreak();
+    noecho();
+    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+    halfdelay(1);
+    keypad(stdscr, true);
+
+    init_pair(1, COLOR_WHITE, COLOR_BLUE);
+    init_pair(2, COLOR_BLACK, COLOR_YELLOW);
+    init_pair(3, COLOR_YELLOW, COLOR_BLUE);
+    init_pair(4, COLOR_WHITE, COLOR_MAGENTA);
+    init_pair(5, COLOR_BLACK, COLOR_WHITE);
+    init_pair(6, COLOR_BLACK, COLOR_YELLOW);
 }
