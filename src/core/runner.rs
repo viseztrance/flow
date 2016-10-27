@@ -54,7 +54,7 @@ pub fn execute(settings: Settings) {
 }
 
 fn catch_signal() {
-    extern fn callback(_: u32) {
+    extern "C" fn callback(_: u32) {
         running!(false);
     };
 

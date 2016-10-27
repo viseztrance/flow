@@ -66,11 +66,11 @@ lazy_static! {
 
 pub enum Component {
     Style(&'static Style),
-    Content(String)
+    Content(String),
 }
 
 pub struct ComponentCollection {
-    pub items: Vec<Component>
+    pub items: Vec<Component>,
 }
 
 impl ComponentCollection {
@@ -97,9 +97,7 @@ impl ComponentCollection {
     }
 
     fn new() -> ComponentCollection {
-        ComponentCollection {
-            items: Vec::new()
-        }
+        ComponentCollection { items: Vec::new() }
     }
 
     fn push(&mut self, item: Component) {
@@ -110,7 +108,7 @@ impl ComponentCollection {
 pub enum Style {
     Attribute(usize, fn() -> u64, bool),
     Color(Option<i16>, Option<i16>),
-    Reset
+    Reset,
 }
 
 pub trait AnsiStr {

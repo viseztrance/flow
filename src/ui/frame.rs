@@ -36,7 +36,7 @@ pub struct Frame {
     pub height: i32,
     pub rendered_lines: Vec<RenderedLine>,
     pub navigation: Navigation,
-    pub content: Content
+    pub content: Content,
 }
 
 impl Frame {
@@ -55,7 +55,7 @@ impl Frame {
             height: LINES(),
             rendered_lines: vec![],
             navigation: Navigation::new(LINES() - 1, 0, &menu_item_names),
-            content: Content::new(COLS())
+            content: Content::new(COLS()),
         }
     }
 
@@ -95,7 +95,13 @@ impl Frame {
 
     pub fn scroll(&self, reversed_offset: i32) {
         let offset = self.rendered_lines_height() as i32 - self.height + 1 - reversed_offset;
-        prefresh(self.content.window, offset, 0, 0, 0, self.height - 2, self.width);
+        prefresh(self.content.window,
+                 offset,
+                 0,
+                 0,
+                 0,
+                 self.height - 2,
+                 self.width);
     }
 
     pub fn watch(&self) -> Event {
@@ -120,14 +126,14 @@ impl Frame {
 
 pub struct RenderedLine {
     pub height: usize,
-    pub found_matches: usize
+    pub found_matches: usize,
 }
 
 impl RenderedLine {
     fn new(height: usize, found_matches: usize) -> RenderedLine {
         RenderedLine {
             height: height,
-            found_matches: found_matches
+            found_matches: found_matches,
         }
     }
 }

@@ -15,8 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 
 extern crate libc;
 extern crate regex;
@@ -27,7 +27,8 @@ extern crate unicode_width;
 extern crate unicode_segmentation;
 extern crate ncurses;
 
-#[macro_use] pub mod macros;
+#[macro_use]
+pub mod macros;
 pub mod ext;
 pub mod utils;
 pub mod core;

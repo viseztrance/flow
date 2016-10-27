@@ -28,14 +28,14 @@ static MAX_LINES_RENDERED: usize = 2_000;
 
 pub struct Buffer {
     pub filter: Filter,
-    pub reverse_index: usize
+    pub reverse_index: usize,
 }
 
 impl Buffer {
     pub fn new(filter: Filter) -> Buffer {
         Buffer {
             filter: filter,
-            reverse_index: DEFAULT_REVERSE_INDEX
+            reverse_index: DEFAULT_REVERSE_INDEX,
         }
     }
 
@@ -61,7 +61,7 @@ pub struct BufferLines<'a> {
     lines: &'a LineCollection,
     pub buffer: &'a Buffer,
     pub width: Option<usize>,
-    pub query: Option<Query>
+    pub query: Option<Query>,
 }
 
 impl<'a> BufferLines<'a> {
@@ -70,7 +70,7 @@ impl<'a> BufferLines<'a> {
             buffer: buffer,
             lines: lines,
             width: None,
-            query: None
+            query: None,
         }
     }
 
@@ -94,21 +94,22 @@ impl<'a> IntoIterator for &'a BufferLines<'a> {
             estimated_height <= MAX_LINES_RENDERED
         };
 
-        let lines_iter = self.lines.entries.iter().filter(|line| {
-            filter.is_match(&line.content_without_ansi)
-        }).rev();
+        let lines_iter = self.lines
+            .entries
+            .iter()
+            .filter(|line| filter.is_match(&line.content_without_ansi))
+            .rev();
 
         let mut lines = match self.query {
             Some(ref value) => {
-                lines_iter
-                    .filter(|line| {
+                lines_iter.filter(|line| {
                         !value.filter_mode ||
-                            (value.filter_mode && line.content_without_ansi.contains(&value.text))
+                        (value.filter_mode && line.content_without_ansi.contains(&value.text))
                     })
-                    .take_while(height_within_boundary).collect::<Vec<_>>()
-
-            },
-            None => lines_iter.take_while(height_within_boundary).collect::<Vec<_>>()
+                    .take_while(height_within_boundary)
+                    .collect::<Vec<_>>()
+            }
+            None => lines_iter.take_while(height_within_boundary).collect::<Vec<_>>(),
         };
 
         lines.reverse();
@@ -127,7 +128,7 @@ impl BufferCollection {
 
         BufferCollection {
             items: items,
-            index: 0
+            index: 0,
         }
     }
 

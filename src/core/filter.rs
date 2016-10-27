@@ -24,14 +24,14 @@ use rustc_serialize::{Decodable, Decoder};
 pub enum Match {
     StartsWith,
     Contains,
-    EndsWith
+    EndsWith,
 }
 
 #[derive(Clone)]
 pub enum Kind {
     Content,
     StartEnd,
-    StartContentEnd
+    StartContentEnd,
 }
 
 #[derive(Clone)]
@@ -41,19 +41,20 @@ pub struct Filter {
     pub contains: Option<Regex>,
     pub ends_with: Option<Regex>,
     pub last_match: Match,
-    pub kind: Kind
+    pub kind: Kind,
 }
 
 impl Filter {
     fn new(name: String,
            starts_with: Option<Regex>,
            contains: Option<Regex>,
-           ends_with: Option<Regex>) -> Filter {
+           ends_with: Option<Regex>)
+           -> Filter {
 
         let kind = determine_kind(&starts_with, &contains, &ends_with);
         let last_match = match kind {
             Kind::Content => Match::Contains,
-            _ => Match::StartsWith
+            _ => Match::StartsWith,
         };
 
         Filter {
@@ -62,7 +63,7 @@ impl Filter {
             contains: contains,
             ends_with: ends_with,
             kind: kind,
-            last_match: last_match
+            last_match: last_match,
         }
     }
 
@@ -70,14 +71,14 @@ impl Filter {
         match self.kind {
             Kind::Content => self.handle_content(text),
             Kind::StartContentEnd => self.handle_start_content_end(text),
-            Kind::StartEnd => self.handle_start_end(text)
+            Kind::StartEnd => self.handle_start_end(text),
         }
     }
 
     fn handle_content(&self, text: &str) -> bool {
         match self.contains {
             Some(ref value) => value.is_match(text),
-            None => true
+            None => true,
         }
     }
 
@@ -89,7 +90,7 @@ impl Filter {
                     self.last_match = Match::EndsWith;
                 }
                 result
-            },
+            }
             Match::Contains => {
                 let mut result = self.contains.as_ref().unwrap().is_match(text);
                 if result {
@@ -101,7 +102,7 @@ impl Filter {
                     self.last_match = Match::StartsWith
                 }
                 result
-            },
+            }
             Match::EndsWith => {
                 let result = self.contains.as_ref().unwrap().is_match(text);
                 if result {
@@ -120,15 +121,15 @@ impl Filter {
                     self.last_match = Match::EndsWith;
                 }
                 result
-            },
+            }
             Match::EndsWith => {
                 let result = self.starts_with.as_ref().unwrap().is_match(text);
                 if result {
                     self.last_match = Match::StartsWith;
                 }
                 true
-            },
-            _ => unreachable!("Unexpected previous match found!")
+            }
+            _ => unreachable!("Unexpected previous match found!"),
         }
     }
 }
@@ -150,35 +151,28 @@ impl Decodable for Filter {
 
 fn determine_kind(starts_with: &Option<Regex>,
                   contains: &Option<Regex>,
-                  ends_with: &Option<Regex>) -> Kind {
+                  ends_with: &Option<Regex>)
+                  -> Kind {
     if starts_with.is_none() && contains.is_none() && ends_with.is_none() {
         Kind::Content
     } else if contains.is_some() {
         if starts_with.is_some() {
-            assert_quit!(
-                ends_with.is_some(),
-                "Expected an `ends_with` value to be found alongside `starts_with`."
-            );
+            assert_quit!(ends_with.is_some(),
+                         "Expected an `ends_with` value to be found alongside `starts_with`.");
 
             Kind::StartContentEnd
         } else {
-            assert_quit!(
-                ends_with.is_none(),
-                "Expected a `starts_with` value to be found alongside `ends_with`."
-            );
+            assert_quit!(ends_with.is_none(),
+                         "Expected a `starts_with` value to be found alongside `ends_with`.");
 
             Kind::Content
         }
     } else {
-        assert_quit!(
-            starts_with.is_some(),
-            "Expected a `starts_with` value to be found alongside `ends_with`."
-        );
+        assert_quit!(starts_with.is_some(),
+                     "Expected a `starts_with` value to be found alongside `ends_with`.");
 
-        assert_quit!(
-            ends_with.is_some(),
-            "Expected an `ends_with` value to be found alongside `starts_with`."
-        );
+        assert_quit!(ends_with.is_some(),
+                     "Expected an `ends_with` value to be found alongside `starts_with`.");
 
         Kind::StartEnd
     }
@@ -187,6 +181,6 @@ fn determine_kind(starts_with: &Option<Regex>,
 fn read_struct_field<D: Decoder>(decoder: &mut D, name: &str, idx: usize) -> Option<Regex> {
     match decoder.read_struct_field(name, idx, |d| d.read_str()) {
         Ok(val) => Some(Regex::new(&val).unwrap()),
-        Err(_) => None
+        Err(_) => None,
     }
 }

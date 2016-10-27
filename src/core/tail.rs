@@ -28,7 +28,7 @@ use core::runner::RUNNING;
 
 pub struct Tail {
     file: File,
-    start_of_file_reached: bool
+    start_of_file_reached: bool,
 }
 
 impl Tail {
@@ -43,11 +43,13 @@ impl Tail {
 
         Tail {
             file: file_handle,
-            start_of_file_reached: false
+            start_of_file_reached: false,
         }
     }
 
-    pub fn watch<F>(&mut self, callback: F) where F : Fn(Vec<String>) {
+    pub fn watch<F>(&mut self, callback: F)
+        where F: Fn(Vec<String>)
+    {
         while running!() {
             callback(self.read_to_end());
             sleep(Duration::from_millis(50));
@@ -87,12 +89,15 @@ impl Tail {
             Some(count) => {
                 let (_, result) = buffer.split_at(count);
                 result.to_vec()
-            },
-            None => self.read_lines_conditionally(bytes * 2, target_lines)
+            }
+            None => self.read_lines_conditionally(bytes * 2, target_lines),
         }
     }
 
-    fn excess_lines_at_beggining_of_buffer(&self, buffer: &[String], target_lines: usize) -> Option<usize> {
+    fn excess_lines_at_beggining_of_buffer(&self,
+                                           buffer: &[String],
+                                           target_lines: usize)
+                                           -> Option<usize> {
         let count = buffer.len();
         if count >= target_lines {
             Some(count - target_lines)

@@ -30,13 +30,13 @@ static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
 pub enum Highlight {
     FirstVisibleOrLast,
     Next,
-    Previous
+    Previous,
 }
 
 pub struct Query {
     pub text: String,
     pub filter_mode: bool,
-    pub highlight: Highlight
+    pub highlight: Highlight,
 }
 
 pub struct Search {
@@ -44,7 +44,7 @@ pub struct Search {
     pub options: Options,
     pub input_field: InputField,
     pub matches_found: bool,
-    panel: PANEL
+    panel: PANEL,
 }
 
 impl Search {
@@ -56,7 +56,7 @@ impl Search {
             options: Options::new(window),
             input_field: InputField::new(window),
             panel: new_panel(window),
-            matches_found: false
+            matches_found: false,
         }
     }
 
@@ -77,7 +77,7 @@ impl Search {
             Some(Query {
                 text: self.input_field.text.borrow().clone(),
                 filter_mode: self.options.filter_mode,
-                highlight: highlight
+                highlight: highlight,
             })
         }
     }
@@ -102,7 +102,7 @@ impl Search {
     fn color_pair_id(&self) -> i16 {
         if !self.matches_found && self.input_field.text.borrow().len() > 0 {
             NO_MATCHES_COLOR_PAIR_ID
-        } else  {
+        } else {
             WITH_MATCHES_COLOR_PAIR_ID
         }
     }
@@ -110,12 +110,12 @@ impl Search {
 #[derive(PartialEq)]
 pub enum State {
     Changed,
-    Unchanged
+    Unchanged,
 }
 
 pub struct InputField {
     pub window: WINDOW,
-    text: RefCell<String>
+    text: RefCell<String>,
 }
 
 impl InputField {
@@ -125,7 +125,7 @@ impl InputField {
 
         InputField {
             window: window,
-            text: RefCell::new(String::new())
+            text: RefCell::new(String::new()),
         }
     }
 
@@ -163,14 +163,14 @@ impl InputField {
 
 pub struct Options {
     pub window: WINDOW,
-    filter_mode: bool
+    filter_mode: bool,
 }
 
 impl Options {
     fn new(parent_window: WINDOW) -> Options {
         Options {
             window: derwin(parent_window, 1, OPTIONS_WIDTH, 0, COLS() - OPTIONS_WIDTH),
-            filter_mode: false
+            filter_mode: false,
         }
     }
 

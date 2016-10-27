@@ -26,7 +26,7 @@ use utils::ansi_decoder::{ComponentCollection, AnsiStr};
 pub struct Line {
     pub content_without_ansi: String,
     pub components: Option<ComponentCollection>,
-    pub width: usize
+    pub width: usize,
 }
 
 impl Line {
@@ -42,7 +42,7 @@ impl Line {
         Line {
             width: content_without_ansi.width(),
             content_without_ansi: content_without_ansi,
-            components: components
+            components: components,
         }
     }
 
@@ -61,14 +61,14 @@ impl Line {
 
 pub struct LineCollection {
     pub entries: VecDeque<Line>,
-    capacity: usize
+    capacity: usize,
 }
 
 impl LineCollection {
     pub fn new(capacity: usize) -> LineCollection {
         LineCollection {
             entries: VecDeque::new(),
-            capacity: capacity
+            capacity: capacity,
         }
     }
 
@@ -88,7 +88,7 @@ impl LineCollection {
 }
 
 impl Extend<String> for LineCollection {
-    fn extend<T: IntoIterator<Item=String>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = String>>(&mut self, iter: T) {
         for item in iter {
             self.add(item);
         }

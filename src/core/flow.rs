@@ -35,13 +35,12 @@ use ext::signal::{self, SIGQUIT};
 pub struct Flow {
     frame: Frame,
     lines: LineCollection,
-    buffer_collection: BufferCollection
+    buffer_collection: BufferCollection,
 }
 
 impl Flow {
     pub fn new(settings: Settings) -> Flow {
-        let menu_item_names = settings
-            .config_file
+        let menu_item_names = settings.config_file
             .filters
             .iter()
             .map(|tab| tab.name.clone())
@@ -50,7 +49,7 @@ impl Flow {
         Flow {
             frame: Frame::new(menu_item_names),
             lines: LineCollection::new(settings.values.max_lines_count),
-            buffer_collection: BufferCollection::from_filters(settings.config_file.filters)
+            buffer_collection: BufferCollection::from_filters(settings.config_file.filters),
         }
     }
 
@@ -71,10 +70,10 @@ impl Flow {
                     if self.frame.navigation.change_state(state) {
                         match self.frame.navigation.state {
                             NavigationState::Search => readline::move_cursor(),
-                            NavigationState::Menu => self.reset_view()
+                            NavigationState::Menu => self.reset_view(),
                         }
                     }
-                },
+                }
                 Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
                 Event::Quit => self.quit(),
@@ -94,7 +93,7 @@ impl Flow {
             Direction::Left => {
                 self.frame.select_left_menu_item();
                 self.buffer_collection.select_previous();
-            },
+            }
             Direction::Right => {
                 self.frame.select_right_menu_item();
                 self.buffer_collection.select_next();
@@ -110,13 +109,13 @@ impl Flow {
         match offset {
             Offset::Line(value) => {
                 buffer.adjust_reverse_index(value, max_value);
-            },
+            }
             Offset::Viewport(value) => {
                 buffer.adjust_reverse_index(value * self.frame.height - 4, max_value);
-            },
+            }
             Offset::Top => {
                 buffer.reverse_index = max_value as usize;
-            },
+            }
             Offset::Bottom => {
                 buffer.reset_reverse_index();
             }
@@ -131,13 +130,13 @@ impl Flow {
                 if self.frame.navigation.search.input_field.read(keys) == QueryState::Changed {
                     self.perform_search(Highlight::FirstVisibleOrLast);
                 }
-            },
+            }
             SearchAction::FindNextMatch => {
                 self.perform_search(Highlight::Next);
-            },
+            }
             SearchAction::FindPreviousMatch => {
                 self.perform_search(Highlight::Previous);
-            },
+            }
             SearchAction::ToggleFilterMode => {
                 self.frame.navigation.search.toggle_filter_mode();
                 self.perform_search(Highlight::FirstVisibleOrLast);

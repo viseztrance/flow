@@ -24,13 +24,13 @@ use ui::search::Search;
 #[derive(PartialEq)]
 pub enum State {
     Menu,
-    Search
+    Search,
 }
 
 pub struct Navigation {
     pub menu: Menu,
     pub search: Search,
-    pub state: State
+    pub state: State,
 }
 
 impl Navigation {
@@ -38,7 +38,7 @@ impl Navigation {
         Navigation {
             menu: Menu::new(position_x, position_y, menu_item_names),
             search: Search::new(position_x, position_y),
-            state: State::Menu
+            state: State::Menu,
         }
     }
 
@@ -76,7 +76,7 @@ impl Navigation {
             State::Menu => {
                 self.search.hide();
                 self.menu.show();
-            },
+            }
             State::Search => {
                 self.menu.hide();
                 self.search.show();

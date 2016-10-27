@@ -22,7 +22,7 @@ pub struct Menu {
     pub window: WINDOW,
     panel: PANEL,
     object: MENU,
-    items: Vec<ITEM>
+    items: Vec<ITEM>,
 }
 
 impl Menu {
@@ -39,7 +39,7 @@ impl Menu {
             window: window,
             panel: new_panel(window),
             object: new_menu(&mut items),
-            items: items
+            items: items,
         }
     }
 

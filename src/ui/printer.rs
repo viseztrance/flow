@@ -41,7 +41,7 @@ impl Print for Line {
                     component.print(content);
                 }
                 waddch(content.window, '\n' as u64);
-            },
+            }
             None => {
                 wprintw(content.window, &format!("{}\n", self.content_without_ansi));
             }
@@ -54,7 +54,7 @@ impl Print for Component {
         match *self {
             Component::Style(value) => {
                 value.print(content);
-            },
+            }
             Component::Content(ref value) => {
                 wprintw(content.window, value);
             }
@@ -75,19 +75,17 @@ impl Print for Style {
                     wattroff(content.window, prop());
                     state.remove_attribute(id);
                 }
-            },
+            }
             Style::Color(foreground, background) => {
-                let color = ColorPair::from_options(
-                    foreground,
-                    background,
-                    state.foreground,
-                    state.background
-                );
+                let color = ColorPair::from_options(foreground,
+                                                    background,
+                                                    state.foreground,
+                                                    state.background);
                 wattron(content.window, color.to_attr());
 
                 state.foreground = color.foreground;
                 state.background = color.background;
-            },
+            }
             Style::Reset => {
                 for (_, prop) in state.attributes.drain(..) {
                     wattroff(content.window, prop());
@@ -102,7 +100,7 @@ impl Print for Style {
 pub struct LinesPrinter<'a> {
     frame: &'a mut Frame,
     height: i32,
-    buffer_lines: &'a BufferLines<'a>
+    buffer_lines: &'a BufferLines<'a>,
 }
 
 impl<'a> LinesPrinter<'a> {
@@ -110,7 +108,7 @@ impl<'a> LinesPrinter<'a> {
         LinesPrinter {
             frame: frame,
             height: 0,
-            buffer_lines: lines
+            buffer_lines: lines,
         }
     }
 
@@ -150,7 +148,8 @@ impl<'a> LinesPrinter<'a> {
                 let mut found_matches = 0;
                 if is_match {
                     self.frame.navigation.search.matches_found = true;
-                    let highlighter = LineHighlighter::new(self.frame, line, NORMAL_HIGHLIGHT_COLOR);
+                    let highlighter =
+                        LineHighlighter::new(self.frame, line, NORMAL_HIGHLIGHT_COLOR);
                     found_matches = highlighter.print(&query.text, self.height, actual_height);
                 }
 
@@ -181,7 +180,8 @@ impl<'a> LinesPrinter<'a> {
             .skip(state.highlighted_line)
             .next()
             .unwrap();
-        let accumulated_height = self.frame.rendered_lines
+        let accumulated_height = self.frame
+            .rendered_lines
             .iter()
             .take(state.highlighted_line)
             .map(|line| line.height)
@@ -194,7 +194,7 @@ impl<'a> LinesPrinter<'a> {
 struct LineHighlighter<'a> {
     frame: &'a Frame,
     line: &'a Line,
-    color_pair_id: i16
+    color_pair_id: i16,
 }
 
 impl<'a> LineHighlighter<'a> {
@@ -202,7 +202,7 @@ impl<'a> LineHighlighter<'a> {
         LineHighlighter {
             frame: frame,
             line: line,
-            color_pair_id: color_pair_id
+            color_pair_id: color_pair_id,
         }
     }
 
@@ -213,7 +213,9 @@ impl<'a> LineHighlighter<'a> {
             self.handle_match(offset_x as i32, accumulated_height, value);
         }
 
-        wmove(self.frame.content.window, accumulated_height + line_height, 0);
+        wmove(self.frame.content.window,
+              accumulated_height + line_height,
+              0);
 
         matches.len()
     }
@@ -237,11 +239,13 @@ impl<'a> LineHighlighter<'a> {
 
 struct HighlightState<'a> {
     state: RefMut<'a, ContentState>,
-    rendered_lines: &'a [RenderedLine]
+    rendered_lines: &'a [RenderedLine],
 }
 
 impl<'a> HighlightState<'a> {
-    fn new(state: RefMut<'a, ContentState>, rendered_lines: &'a [RenderedLine]) -> HighlightState<'a> {
+    fn new(state: RefMut<'a, ContentState>,
+           rendered_lines: &'a [RenderedLine])
+           -> HighlightState<'a> {
         HighlightState {
             state: state,
             rendered_lines: rendered_lines,
@@ -252,7 +256,7 @@ impl<'a> HighlightState<'a> {
         match *highlight {
             Highlight::FirstVisibleOrLast => self.handle_first_visible_or_last(),
             Highlight::Next => self.handle_next(),
-            Highlight::Previous => self.handle_previous()
+            Highlight::Previous => self.handle_previous(),
         }
     }
 

@@ -70,15 +70,11 @@ pub fn terminate() {
 }
 
 pub fn read_buffer<'a>() -> &'a str {
-    unsafe {
-        cstr_ptr_to_str(rl_line_buffer)
-    }
+    unsafe { cstr_ptr_to_str(rl_line_buffer) }
 }
 
 pub fn read_prompt<'a>() -> &'a str {
-    unsafe {
-        cstr_ptr_to_str(rl_display_prompt)
-    }
+    unsafe { cstr_ptr_to_str(rl_display_prompt) }
 }
 
 pub fn move_cursor() {
@@ -88,8 +84,7 @@ pub fn move_cursor() {
         let buffer = read_buffer();
 
         let mut current_bytes = 0;
-        let cursor_position = buffer
-            .graphemes(true)
+        let cursor_position = buffer.graphemes(true)
             .take_while(|x| {
                 current_bytes += x.len();
                 current_bytes <= rl_point as usize
@@ -140,7 +135,9 @@ extern "C" fn handle_input(line_ptr: *mut c_char) {
         return;
     }
 
-    unsafe { free(line_ptr as *mut c_void); }
+    unsafe {
+        free(line_ptr as *mut c_void);
+    }
 }
 
 unsafe fn cstr_ptr_to_str<'a>(c_str: *const i8) -> &'a str {

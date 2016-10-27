@@ -31,13 +31,13 @@ static DEFAULT_MAX_LINES_STORED: usize = 5000;
 
 pub struct Settings {
     pub values: SettingsValues,
-    pub config_file: ConfigFile
+    pub config_file: ConfigFile,
 }
 
 pub struct SettingsBuilder {
     program_name: String,
     options: Options,
-    matches: Matches
+    matches: Matches,
 }
 
 impl SettingsBuilder {
@@ -48,7 +48,7 @@ impl SettingsBuilder {
         SettingsBuilder {
             program_name: args.get(0).unwrap().clone(),
             options: opts,
-            matches: matches
+            matches: matches,
         }
     }
 
@@ -59,7 +59,7 @@ impl SettingsBuilder {
         let values = SettingsValues {
             path_to_target_file: self.get_target(),
             max_lines_count: self.get_max_lines_count(),
-            last_lines_count: self.get_last_lines_count()
+            last_lines_count: self.get_last_lines_count(),
         };
 
         let config_file = ConfigFile::from_path(self.calculate_config_path());
@@ -80,7 +80,7 @@ impl SettingsBuilder {
             Some(value) => {
                 self.assert_file_exists(&PathBuf::from(value));
                 value.to_string()
-            },
+            }
             None => {
                 quit!(self.usage(), 1);
             }
@@ -93,7 +93,7 @@ impl SettingsBuilder {
                 let path = PathBuf::from(value);
                 self.assert_file_exists(&path);
                 path
-            },
+            }
             None => {
                 let mut current_dir_config_path = env::current_dir().unwrap();
                 current_dir_config_path.push(".flow");
@@ -115,14 +115,14 @@ impl SettingsBuilder {
     fn get_last_lines_count(&self) -> usize {
         match self.matches.opt_str("n") {
             Some(value) => value.parse::<usize>().unwrap(),
-            None => DEFAULT_LAST_LINES_SHOWN
+            None => DEFAULT_LAST_LINES_SHOWN,
         }
     }
 
     fn get_max_lines_count(&self) -> usize {
         match self.matches.opt_str("m") {
             Some(value) => value.parse::<usize>().unwrap(),
-            None => DEFAULT_MAX_LINES_STORED
+            None => DEFAULT_MAX_LINES_STORED,
         }
     }
 
@@ -137,12 +137,12 @@ impl SettingsBuilder {
 pub struct SettingsValues {
     pub path_to_target_file: String,
     pub last_lines_count: usize,
-    pub max_lines_count: usize
+    pub max_lines_count: usize,
 }
 
 #[derive(RustcDecodable)]
 pub struct ConfigFile {
-    pub filters: Vec<Filter>
+    pub filters: Vec<Filter>,
 }
 
 impl ConfigFile {
@@ -158,10 +158,11 @@ impl ConfigFile {
         let contents = &mut String::new();
         let _ = file_handle.read_to_string(contents);
 
-        let parsed_contents =  match toml::Parser::new(contents).parse() {
+        let parsed_contents = match toml::Parser::new(contents).parse() {
             Some(value) => value,
             None => {
-                let message = format!("Provided config file {:?} doesn't have a valid format.", path);
+                let message = format!("Provided config file {:?} doesn't have a valid format.",
+                                      path);
                 quit!(message, 2);
             }
         };
@@ -177,9 +178,21 @@ impl ConfigFile {
 
 fn build_opts() -> Options {
     let mut opts = Options::new();
-    opts.optopt("n", "lines", &format!("Output the last NUM lines. Default is {}.", DEFAULT_LAST_LINES_SHOWN), "NUM");
-    opts.optopt("m", "max", &format!("Maximum amount of lines to be stored in memory. Default is {}.", DEFAULT_MAX_LINES_STORED), "MAX");
-    opts.optopt("c", "config", "Path to a config file. Defaults to looking in the current directory and user home.", "CONFIG");
+    opts.optopt("n",
+                "lines",
+                &format!("Output the last NUM lines. Default is {}.",
+                         DEFAULT_LAST_LINES_SHOWN),
+                "NUM");
+    opts.optopt("m",
+                "max",
+                &format!("Maximum amount of lines to be stored in memory. Default is {}.",
+                         DEFAULT_MAX_LINES_STORED),
+                "MAX");
+    opts.optopt("c",
+                "config",
+                "Path to a config file. Defaults to looking in the current directory and user \
+                 home.",
+                "CONFIG");
     opts.optflag("h", "help", "Print this help menu.");
     opts
 }

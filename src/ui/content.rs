@@ -26,14 +26,14 @@ static WINDOW_HEIGHT: i32 = 2500;
 
 pub struct Content {
     pub window: WINDOW,
-    pub state: RefCell<State>
+    pub state: RefCell<State>,
 }
 
 impl Content {
     pub fn new(width: i32) -> Content {
         Content {
             window: newpad(WINDOW_HEIGHT, width),
-            state: RefCell::new(State::default())
+            state: RefCell::new(State::default()),
         }
     }
 
@@ -54,7 +54,9 @@ impl Content {
         current_y
     }
 
-    pub fn calculate_height_change<F>(&self, callback: F) -> i32 where F : Fn() {
+    pub fn calculate_height_change<F>(&self, callback: F) -> i32
+        where F: Fn()
+    {
         let initial_height = self.height();
         callback();
         self.height() - initial_height
@@ -66,7 +68,7 @@ pub struct State {
     pub foreground: i16,
     pub background: i16,
     pub highlighted_line: usize,
-    pub highlighted_match: usize
+    pub highlighted_match: usize,
 }
 
 impl State {
@@ -76,7 +78,7 @@ impl State {
             foreground: COLOR_DEFAULT,
             background: COLOR_DEFAULT,
             highlighted_line: 0,
-            highlighted_match: 0
+            highlighted_match: 0,
         }
     }
 

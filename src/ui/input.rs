@@ -41,18 +41,18 @@ pub enum Key {
     Delete,
     Char(char),
     Escape,
-    Other
+    Other,
 }
 
 pub enum Modifier {
     Alt(i32),
-    Ctrl
+    Ctrl,
 }
 
 pub enum Input {
     Kb(Key, Option<Modifier>),
     Resize,
-    None
+    None,
 }
 
 pub fn read_key() -> (Input, i32) {
@@ -72,7 +72,7 @@ pub fn read_key() -> (Input, i32) {
         KEY_DC => Input::Kb(Key::Delete, None),
         KEY_BACKSPACE => Input::Kb(Key::Backspace, None),
         KEY_BTAB => Input::Kb(Key::Tab, None),
-        value => parse_key_code(value)
+        value => parse_key_code(value),
     };
     (input, key)
 }
@@ -84,7 +84,7 @@ fn parse_key_code(code: i32) -> Input {
     if pending == ESCAPE_CODE {
         let new_code = wgetch(stdscr());
         if new_code == ERR {
-            return Input::Kb(Key::Escape, None)
+            return Input::Kb(Key::Escape, None);
         }
         pending = new_code;
         modifier = Some(Modifier::Alt(pending));
@@ -93,14 +93,12 @@ fn parse_key_code(code: i32) -> Input {
         if name.contains('^') {
             modifier = Some(Modifier::Ctrl);
             let value = Key::Char(name.chars().last().unwrap());
-            return Input::Kb(value, modifier)
+            return Input::Kb(value, modifier);
         }
     }
 
     match char::from_u32(pending as u32) {
-        Some(parsed_code) => {
-            Input::Kb(Key::Char(parsed_code), modifier)
-        },
-        _ => Input::Kb(Key::Other, None)
+        Some(parsed_code) => Input::Kb(Key::Char(parsed_code), modifier),
+        _ => Input::Kb(Key::Other, None),
     }
 }
