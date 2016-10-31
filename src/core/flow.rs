@@ -18,7 +18,6 @@
 
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
-use std::cell::RefCell;
 
 use ui::readline;
 use utils::settings::Settings;
@@ -29,7 +28,7 @@ use ui::search::{State as QueryState, Highlight};
 
 use core::runner::RUNNING;
 use core::line::LineCollection;
-use core::buffer::{Buffer, BufferCollection};
+use core::buffer::BufferCollection;
 use ext::signal::{self, SIGQUIT};
 
 pub struct Flow {
@@ -103,25 +102,25 @@ impl Flow {
     }
 
     fn scroll(&mut self, offset: Offset) {
-        let mut buffer = self.current_buffer().borrow_mut();
-        let max_value = self.frame.rendered_lines_height() as i32 - self.frame.height;
+        let buffer = self.buffer_collection.selected_item();
 
         match offset {
             Offset::Line(value) => {
-                buffer.adjust_reverse_index(value, max_value);
+                buffer.increment_reverse_index(value, self.frame.max_scroll_value());
             }
             Offset::Viewport(value) => {
-                buffer.adjust_reverse_index(value * self.frame.height - 4, max_value);
+                buffer.increment_reverse_index(value * self.frame.height - 4,
+                                               self.frame.max_scroll_value());
             }
             Offset::Top => {
-                buffer.reverse_index = max_value as usize;
+                buffer.reverse_index.set(self.frame.max_scroll_value() as usize);
             }
             Offset::Bottom => {
                 buffer.reset_reverse_index();
             }
         };
 
-        self.frame.scroll(buffer.reverse_index as i32);
+        self.frame.scroll(buffer.reverse_index.get() as i32);
     }
 
     fn handle_search(&mut self, action: SearchAction) {
@@ -151,13 +150,13 @@ impl Flow {
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
-        let initial_height = self.frame.rendered_lines_height();
+        let initial_height = self.frame.rendered_lines.height();
 
         self.lines.extend(pending_lines);
 
         self.reset_view();
-        if self.current_buffer().borrow().is_scrolled() {
-            let offset = self.frame.rendered_lines_height() - initial_height;
+        if self.buffer_collection.selected_item().is_scrolled() {
+            let offset = self.frame.rendered_lines.height() - initial_height;
             self.scroll(Offset::Line(offset as i32));
         }
 
@@ -165,21 +164,16 @@ impl Flow {
     }
 
     fn reset_view(&mut self) {
-        let buffer = self.buffer_collection.selected_item().borrow();
+        let buffer = self.buffer_collection.selected_item();
         self.frame.print(&mut buffer.with_lines(&self.lines), None);
-        self.frame.scroll(buffer.reverse_index as i32);
     }
 
     fn reset_scroll(&self) {
-        self.current_buffer().borrow_mut().reset_reverse_index();
-    }
-
-    fn current_buffer(&self) -> &RefCell<Buffer> {
-        self.buffer_collection.selected_item()
+        self.buffer_collection.selected_item().reset_reverse_index();
     }
 
     fn perform_search(&mut self, highlight: Highlight) {
-        let buffer = self.buffer_collection.selected_item().borrow();
+        let buffer = self.buffer_collection.selected_item();
         let query = self.frame.navigation.search.build_query(highlight);
         self.frame.print(&mut buffer.with_lines(&self.lines), query);
         self.frame.navigation.search.render();

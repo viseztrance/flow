@@ -17,7 +17,7 @@
  */
 
 use std::cmp::{min, max};
-use std::cell::RefCell;
+use std::cell::Cell;
 
 use core::line::{Line, LineCollection};
 use core::filter::Filter;
@@ -28,14 +28,14 @@ static MAX_LINES_RENDERED: usize = 2_000;
 
 pub struct Buffer {
     pub filter: Filter,
-    pub reverse_index: usize,
+    pub reverse_index: Cell<usize>,
 }
 
 impl Buffer {
     pub fn new(filter: Filter) -> Buffer {
         Buffer {
             filter: filter,
-            reverse_index: DEFAULT_REVERSE_INDEX,
+            reverse_index: Cell::new(DEFAULT_REVERSE_INDEX),
         }
     }
 
@@ -43,17 +43,20 @@ impl Buffer {
         BufferLines::new(self, lines)
     }
 
-    pub fn adjust_reverse_index(&mut self, value: i32, max_value: i32) {
-        let new_reverse_index = self.reverse_index as i32 + value;
-        self.reverse_index = min(max(0, new_reverse_index), max_value) as usize;
+    pub fn increment_reverse_index(&self, value: i32, max_value: i32) {
+        self.set_reverse_index(self.reverse_index.get() as i32 + value, max_value);
+    }
+
+    pub fn set_reverse_index(&self, value: i32, max_value: i32) {
+        self.reverse_index.set(min(max(0, value), max_value) as usize);
     }
 
     pub fn is_scrolled(&self) -> bool {
-        self.reverse_index != DEFAULT_REVERSE_INDEX
+        self.reverse_index.get() != DEFAULT_REVERSE_INDEX
     }
 
-    pub fn reset_reverse_index(&mut self) {
-        self.reverse_index = DEFAULT_REVERSE_INDEX;
+    pub fn reset_reverse_index(&self) {
+        self.reverse_index.set(DEFAULT_REVERSE_INDEX);
     }
 }
 
@@ -118,13 +121,13 @@ impl<'a> IntoIterator for &'a BufferLines<'a> {
 }
 
 pub struct BufferCollection {
-    items: Vec<RefCell<Buffer>>,
+    items: Vec<Buffer>,
     index: usize,
 }
 
 impl BufferCollection {
     pub fn from_filters(filters: Vec<Filter>) -> BufferCollection {
-        let items = filters.iter().map(|e| RefCell::new(Buffer::new(e.clone()))).collect();
+        let items = filters.iter().map(|e| Buffer::new(e.clone())).collect();
 
         BufferCollection {
             items: items,
@@ -132,7 +135,7 @@ impl BufferCollection {
         }
     }
 
-    pub fn selected_item(&self) -> &RefCell<Buffer> {
+    pub fn selected_item(&self) -> &Buffer {
         self.items.get(self.index).unwrap()
     }
 

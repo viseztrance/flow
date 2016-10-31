@@ -26,3 +26,4 @@ pub mod event;
 pub mod readline;
 pub mod color;
 pub mod printer;
+pub mod rendered_line;

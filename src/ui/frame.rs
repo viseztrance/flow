@@ -23,10 +23,11 @@ use ui::readline;
 use ui::color;
 use ui::input::read_key;
 use ui::event::{EventBuilder, Event};
-use ui::navigation::Navigation;
+use ui::navigation::{Navigation, HEIGHT as NAVIGATION_HEIGHT};
 use ui::content::Content;
 use ui::printer::LinesPrinter;
 use ui::search::Query;
+use ui::rendered_line::RenderedLineCollection;
 
 pub static NORMAL_HIGHLIGHT_COLOR: i16 = 5;
 pub static CURRENT_HIGHLIGHT_COLOR: i16 = 6;
@@ -34,27 +35,24 @@ pub static CURRENT_HIGHLIGHT_COLOR: i16 = 6;
 pub struct Frame {
     pub width: i32,
     pub height: i32,
-    pub rendered_lines: Vec<RenderedLine>,
+    pub rendered_lines: RenderedLineCollection,
     pub navigation: Navigation,
     pub content: Content,
 }
 
 impl Frame {
     pub fn new(menu_item_names: Vec<String>) -> Frame {
-        ::std::env::set_var("ESCDELAY", "25");
-        setlocale(LcCategory::all, ""); // Must be set *before* ncurses init
-
+        // Init order is important
+        env_init();
         readline::init();
-
         ncurses_init();
-
         color::generate_pairs();
 
         Frame {
             width: COLS(),
             height: LINES(),
-            rendered_lines: vec![],
-            navigation: Navigation::new(LINES() - 1, 0, &menu_item_names),
+            rendered_lines: RenderedLineCollection::default(),
+            navigation: Navigation::new(LINES() - NAVIGATION_HEIGHT, 0, &menu_item_names),
             content: Content::new(COLS()),
         }
     }
@@ -83,24 +81,25 @@ impl Frame {
         getmaxyx(stdscr(), &mut self.height, &mut self.width);
 
         self.content.resize(self.width);
-        self.navigation.resize(0, self.height - 1);
+        self.navigation.resize(0, self.height - NAVIGATION_HEIGHT);
     }
 
     pub fn print(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
         buffer_lines.set_context(self.width as usize, query);
 
         LinesPrinter::new(self, buffer_lines).draw();
-        self.scroll(buffer_lines.buffer.reverse_index as i32);
+        self.scroll(buffer_lines.buffer.reverse_index.get() as i32);
     }
 
     pub fn scroll(&self, reversed_offset: i32) {
-        let offset = self.rendered_lines_height() as i32 - self.height + 1 - reversed_offset;
+        let offset = self.rendered_lines.height() - self.height + NAVIGATION_HEIGHT -
+                     reversed_offset;
         prefresh(self.content.window,
                  offset,
                  0,
                  0,
                  0,
-                 self.height - 2,
+                 self.height - NAVIGATION_HEIGHT - 1,
                  self.width);
     }
 
@@ -115,27 +114,14 @@ impl Frame {
         self.navigation.search.matches_found = false;
     }
 
-    pub fn create_rendered_line(&mut self, height: usize, found_matches: usize) {
-        self.rendered_lines.push(RenderedLine::new(height, found_matches));
-    }
-
-    pub fn rendered_lines_height(&self) -> usize {
-        self.rendered_lines.iter().map(|line| line.height).sum()
+    pub fn max_scroll_value(&self) -> i32 {
+        self.rendered_lines.height() - self.height
     }
 }
 
-pub struct RenderedLine {
-    pub height: usize,
-    pub found_matches: usize,
-}
-
-impl RenderedLine {
-    fn new(height: usize, found_matches: usize) -> RenderedLine {
-        RenderedLine {
-            height: height,
-            found_matches: found_matches,
-        }
-    }
+fn env_init() {
+    ::std::env::set_var("ESCDELAY", "25");
+    setlocale(LcCategory::all, "");
 }
 
 fn ncurses_init() {

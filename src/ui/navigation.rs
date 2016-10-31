@@ -21,6 +21,8 @@ use ncurses::*;
 use ui::menu::Menu;
 use ui::search::Search;
 
+pub static HEIGHT: i32 = 1;
+
 #[derive(PartialEq)]
 pub enum State {
     Menu,
@@ -64,7 +66,9 @@ impl Navigation {
 
     pub fn resize(&self, position_x: i32, position_y: i32) {
         mvwin(self.search.window, position_y, position_x);
-        mvwin(self.search.input_field.window, position_y, position_x + 1);
+        mvwin(self.search.input_field.window,
+              position_y,
+              position_x + HEIGHT);
         wrefresh(self.search.input_field.window);
         mvwin(self.menu.window, position_y, position_x);
 
