@@ -1,7 +1,14 @@
 [package]
 name = "flow"
 version = "0.1.0"
+description = "A realtime log analyzer"
 authors = ["Daniel Mircea <daniel@viseztrance.com>"]
+repository = "https://github.com/viseztrance/flow"
+homepage = "https://github.com/viseztrance/flow"
+documentation = "https://github.com/viseztrance/flow"
+keywords = ["log", "tui", "search", "tail"]
+readme = "README.md"
+license = "GPL-3.0"
 
 [[bin]]
 name = "flow"
