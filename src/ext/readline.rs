@@ -44,7 +44,6 @@ extern "C" {
     pub fn rl_unbind_key(key: c_int) -> c_int;
     pub fn rl_callback_read_char();
     pub fn rl_insert(_: c_int, _: c_int) -> c_int;
-    pub fn rl_reset_line_state();
     pub fn rl_callback_handler_install(prompt: *const c_char, callback: RlVcpfuncT);
     pub fn rl_callback_handler_remove();
 }

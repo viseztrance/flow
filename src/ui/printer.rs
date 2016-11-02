@@ -155,7 +155,7 @@ impl<'a> LinesPrinter<'a> {
     }
 
     fn handle_print_with_search(&mut self, query: &Query) {
-        if query.highlight == Highlight::VisibleOrLast {
+        if query.highlight == Highlight::VisibleOrLast || query.highlight == Highlight::Current {
             self.frame.reset();
             self.height = 0;
 
@@ -178,7 +178,9 @@ impl<'a> LinesPrinter<'a> {
                 self.frame.rendered_lines.create(actual_height, found_matches);
             }
 
-            if self.frame.navigation.search.matches_found {
+            if query.highlight == Highlight::Current {
+                self.highlight_current_item(&query.text, CURRENT_HIGHLIGHT_COLOR);
+            } else if self.frame.navigation.search.matches_found {
                 self.update_current_and_highlight_item(query);
             }
         } else if self.frame.navigation.search.matches_found {
@@ -300,6 +302,7 @@ impl<'a> HighlightState<'a> {
             Highlight::VisibleOrLast => self.handle_visible_or_last(),
             Highlight::Next => self.handle_next(),
             Highlight::Previous => self.handle_previous(),
+            _ => unreachable!()
         }
     }
 

@@ -72,7 +72,7 @@ impl LineCollection {
         }
     }
 
-    pub fn clear_excess(&mut self) {
+    fn clear_excess(&mut self) {
         while self.entries.len() > self.capacity {
             self.entries.pop_front();
         }
@@ -92,5 +92,7 @@ impl Extend<String> for LineCollection {
         for item in iter {
             self.add(item);
         }
+
+        self.clear_excess();
     }
 }

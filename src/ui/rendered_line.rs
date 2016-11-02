@@ -73,6 +73,10 @@ impl RenderedLineCollection {
         self.entries.iter().take(index).height()
     }
 
+    pub fn last_lines_height(&self, count: usize) -> i32 {
+        self.entries.iter().rev().take(count).height()
+    }
+
     pub fn is_match_in_viewport(&self, matched_line: MatchedLine, viewport: Viewport) -> bool {
         let limit = viewport.limit();
         let accumulated_height = self.entries.iter().skip(matched_line.line).height() as usize;

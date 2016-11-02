@@ -31,6 +31,7 @@ pub enum Highlight {
     VisibleOrLast,
     Next,
     Previous,
+    Current,
 }
 
 pub struct Query {
@@ -91,7 +92,6 @@ impl Search {
         self.render();
         curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
         show_panel(self.panel);
-        self.input_field.reset();
     }
 
     pub fn hide(&self) {
@@ -152,12 +152,7 @@ impl InputField {
     }
 
     fn is_empty(&self) -> bool {
-        self.text.borrow().len() == 0
-    }
-
-    fn reset(&self) {
-        readline::reset();
-        *self.text.borrow_mut() = String::new();
+        self.text.borrow().is_empty()
     }
 }
 

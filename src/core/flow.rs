@@ -145,22 +145,19 @@ impl Flow {
 
     fn resize(&mut self) {
         self.frame.resize();
-        self.reset_scroll();
-        self.reset_view();
+        self.reset_view_or_redo_search();
     }
 
     fn append_incoming_lines(&mut self, pending_lines: Vec<String>) {
-        let initial_height = self.frame.rendered_lines.height();
-
+        let count = pending_lines.len();
         self.lines.extend(pending_lines);
 
-        self.reset_view();
-        if self.buffer_collection.selected_item().is_scrolled() {
-            let offset = self.frame.rendered_lines.height() - initial_height;
-            self.scroll(Offset::Line(offset as i32));
-        }
+        self.reset_view_or_redo_search();
 
-        self.lines.clear_excess();
+        if self.buffer_collection.selected_item().is_scrolled() {
+            let offset = self.frame.rendered_lines.last_lines_height(count);
+            self.scroll(Offset::Line(offset));
+        }
     }
 
     fn reset_view(&mut self) {
@@ -168,8 +165,11 @@ impl Flow {
         self.frame.print(&mut buffer.with_lines(&self.lines), None);
     }
 
-    fn reset_scroll(&self) {
-        self.buffer_collection.selected_item().reset_reverse_index();
+    fn reset_view_or_redo_search(&mut self) {
+        match self.frame.navigation.state {
+            NavigationState::Search => self.perform_search(Highlight::Current),
+            NavigationState::Menu => self.reset_view(),
+        }
     }
 
     fn perform_search(&mut self, highlight: Highlight) {

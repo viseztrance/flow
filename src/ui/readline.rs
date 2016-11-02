@@ -97,12 +97,6 @@ pub fn move_cursor() {
     }
 }
 
-pub fn reset() {
-    unsafe {
-        rl_reset_line_state();
-    }
-}
-
 extern "C" fn getc(_: *mut FILE) -> i32 {
     unsafe {
         input_available = false;
