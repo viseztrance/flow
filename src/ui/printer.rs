@@ -265,11 +265,10 @@ impl<'a> LineHighlighter<'a> {
     fn handle_match(&self, mut offset_x: i32, mut offset_y: i32, value: &str) -> usize {
         let initial_offset_y = offset_y;
 
-        if offset_x > self.container_width {
-            offset_x = self.line.content_without_ansi.split_at(offset_x as usize).0.width() as i32;
-            offset_y += offset_x / self.container_width;
-            offset_x %= self.container_width;
-        }
+        offset_x = self.line.content_without_ansi.split_at(offset_x as usize).0.width() as i32;
+        offset_y += offset_x / self.container_width;
+        offset_x %= self.container_width;
+
         wattron(self.window, COLOR_PAIR(self.color_pair_id));
         mvwprintw(self.window, offset_y, offset_x, value);
         wattroff(self.window, COLOR_PAIR(self.color_pair_id));
