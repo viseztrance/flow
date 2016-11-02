@@ -81,7 +81,7 @@ impl Frame {
         getmaxyx(stdscr(), &mut self.height, &mut self.width);
 
         self.content.resize(self.width);
-        self.navigation.resize(0, self.height - NAVIGATION_HEIGHT);
+        self.navigation.resize(0, self.content_height());
     }
 
     pub fn print(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
@@ -99,7 +99,7 @@ impl Frame {
                  0,
                  0,
                  0,
-                 self.height - NAVIGATION_HEIGHT - 1,
+                 self.content_height() - 1,
                  self.width);
     }
 
@@ -114,8 +114,12 @@ impl Frame {
         self.navigation.search.matches_found = false;
     }
 
-    pub fn max_scroll_value(&self) -> i32 {
-        self.rendered_lines.height() - self.height
+    pub fn max_scroll_value(&self) -> usize {
+        (self.rendered_lines.height() - self.height) as usize
+    }
+
+    pub fn content_height(&self) -> i32 {
+        self.height - NAVIGATION_HEIGHT
     }
 }
 

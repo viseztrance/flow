@@ -28,7 +28,7 @@ use ui::frame::{Frame, NORMAL_HIGHLIGHT_COLOR, CURRENT_HIGHLIGHT_COLOR};
 use ui::color::ColorPair;
 use ui::content::{Content, State as ContentState};
 use ui::search::{Query, Highlight};
-use ui::rendered_line::{RenderedLineCollection, FindMatch};
+use ui::rendered_line::RenderedLineCollection;
 
 pub trait Print {
     fn print(&self, content: &Content);
@@ -98,6 +98,25 @@ impl Print for Style {
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct Viewport {
+    pub reverse_index: usize,
+    pub visible_height: usize,
+}
+
+impl Viewport {
+    fn new(reverse_index: usize, visible_height: usize) -> Viewport {
+        Viewport {
+            reverse_index: reverse_index,
+            visible_height: visible_height,
+        }
+    }
+
+    pub fn limit(&self) -> usize {
+        self.reverse_index + self.visible_height
+    }
+}
+
 pub struct LinesPrinter<'a> {
     frame: &'a mut Frame,
     height: i32,
@@ -136,7 +155,7 @@ impl<'a> LinesPrinter<'a> {
     }
 
     fn handle_print_with_search(&mut self, query: &Query) {
-        if query.highlight == Highlight::FirstVisibleOrLast {
+        if query.highlight == Highlight::VisibleOrLast {
             self.frame.reset();
             self.height = 0;
 
@@ -169,34 +188,40 @@ impl<'a> LinesPrinter<'a> {
     }
 
     fn update_current_and_highlight_item(&self, query: &Query) {
-        HighlightState::new(self.frame.content.state.borrow_mut(),
-                            &self.frame.rendered_lines)
-            .update(&query.highlight);
+        let viewport = Viewport::new(self.buffer_lines.buffer.reverse_index.get(),
+                                     self.frame.content_height() as usize);
 
+        HighlightState::new(self.frame.content.state.borrow_mut(),
+                            &self.frame.rendered_lines,
+                            viewport)
+            .update(&query.highlight);
         self.highlight_current_item(&query.text, CURRENT_HIGHLIGHT_COLOR);
 
-        let state = self.frame.content.state.borrow();
-        let index = self.frame
-            .rendered_lines
-            .buffer_reverse_index(state.highlighted_line, state.highlighted_match);
-
-        self.buffer_lines
-            .buffer
-            .set_reverse_index(index - self.frame.height / 2, self.frame.max_scroll_value());
+        let matched_line = self.frame.content.highlighted_line();
+        if !self.frame.rendered_lines.is_match_in_viewport(matched_line, viewport) {
+            self.update_scroll_position();
+        }
     }
 
     fn highlight_current_item(&self, text: &str, color: i16) {
         let state = self.frame.content.state.borrow();
-        let line = self.buffer_lines
-            .into_iter()
-            .skip(state.highlighted_line)
-            .next()
-            .unwrap();
+        let line = &self.buffer_lines[state.highlighted_line];
+
         let accumulated_height = self.frame
             .rendered_lines
             .height_up_to_index(state.highlighted_line);
         let highlighter = LineHighlighter::new(self.frame, line, color);
         highlighter.print_single_match(text, state.highlighted_match, accumulated_height);
+    }
+
+    fn update_scroll_position(&self) {
+        let state = self.frame.content.state.borrow();
+        let index = self.frame
+            .rendered_lines
+            .buffer_reverse_index(state.highlighted_line, state.highlighted_match);
+        self.buffer_lines
+            .buffer
+            .set_reverse_index(index - self.frame.height / 2, self.frame.max_scroll_value());
     }
 }
 
@@ -256,37 +281,36 @@ impl<'a> LineHighlighter<'a> {
 struct HighlightState<'a> {
     state: RefMut<'a, ContentState>,
     rendered_lines: &'a RenderedLineCollection,
+    viewport: Viewport,
 }
 
 impl<'a> HighlightState<'a> {
     fn new(state: RefMut<'a, ContentState>,
-           rendered_lines: &'a RenderedLineCollection)
+           rendered_lines: &'a RenderedLineCollection,
+           viewport: Viewport)
            -> HighlightState<'a> {
         HighlightState {
             state: state,
             rendered_lines: rendered_lines,
+            viewport: viewport,
         }
     }
 
     fn update(&mut self, highlight: &Highlight) {
         match *highlight {
-            Highlight::FirstVisibleOrLast => self.handle_first_visible_or_last(),
+            Highlight::VisibleOrLast => self.handle_visible_or_last(),
             Highlight::Next => self.handle_next(),
             Highlight::Previous => self.handle_previous(),
         }
     }
 
-    fn handle_first_visible_or_last(&mut self) {
+    fn handle_visible_or_last(&mut self) {
         let matched_line = self.rendered_lines
-            .entries
-            .iter()
-            .rev()
-            .enumerate()
-            .find_match()
-            .unwrap();
+            .viewport_match(&self.viewport)
+            .unwrap_or(self.rendered_lines.first_match());
 
         self.state.highlighted_line = self.rendered_lines.len() - matched_line.line - 1;
-        self.state.highlighted_match = matched_line.matches;
+        self.state.highlighted_match = matched_line.match_index;
     }
 
     fn handle_next(&mut self) {
@@ -295,11 +319,8 @@ impl<'a> HighlightState<'a> {
             self.state.highlighted_match += 1;
         } else {
             let matched_line_opt = self.rendered_lines
-                .entries
-                .iter()
-                .enumerate()
-                .skip(self.state.highlighted_line + 1)
-                .find_match();
+                .next_match(self.state.highlighted_line);
+
             if let Some(matched_line) = matched_line_opt {
                 self.state.highlighted_line = matched_line.line;
                 self.state.highlighted_match = 0;
@@ -312,15 +333,11 @@ impl<'a> HighlightState<'a> {
             self.state.highlighted_match -= 1;
         } else if self.state.highlighted_line > 0 {
             let matched_line_opt = self.rendered_lines
-                .entries
-                .iter()
-                .enumerate()
-                .rev()
-                .skip(self.rendered_lines.len() - self.state.highlighted_line)
-                .find_match();
+                .previous_match(self.state.highlighted_line);
+
             if let Some(matched_line) = matched_line_opt {
                 self.state.highlighted_line = matched_line.line;
-                self.state.highlighted_match = matched_line.matches;
+                self.state.highlighted_match = matched_line.match_index;
             }
         }
     }

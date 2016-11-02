@@ -127,7 +127,7 @@ impl Flow {
         match action {
             SearchAction::ReadInput(keys) => {
                 if self.frame.navigation.search.input_field.read(keys) == QueryState::Changed {
-                    self.perform_search(Highlight::FirstVisibleOrLast);
+                    self.perform_search(Highlight::VisibleOrLast);
                 }
             }
             SearchAction::FindNextMatch => {
@@ -138,7 +138,7 @@ impl Flow {
             }
             SearchAction::ToggleFilterMode => {
                 self.frame.navigation.search.toggle_filter_mode();
-                self.perform_search(Highlight::FirstVisibleOrLast);
+                self.perform_search(Highlight::VisibleOrLast);
             }
         }
     }

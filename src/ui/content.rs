@@ -21,6 +21,7 @@ use std::cell::RefCell;
 use ncurses::*;
 
 use ui::color::COLOR_DEFAULT;
+use ui::rendered_line::MatchedLine;
 
 static WINDOW_HEIGHT: i32 = 2500;
 
@@ -60,6 +61,12 @@ impl Content {
         let initial_height = self.height();
         callback();
         self.height() - initial_height
+    }
+
+    pub fn highlighted_line(&self) -> MatchedLine {
+        let state = self.state.borrow();
+
+        MatchedLine::new(state.highlighted_line, state.highlighted_match)
     }
 }
 

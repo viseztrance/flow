@@ -18,6 +18,8 @@
 
 use std::ops::Index;
 
+use ui::printer::Viewport;
+
 pub struct RenderedLine {
     pub height: i32,
     pub found_matches: Option<Vec<usize>>,
@@ -70,6 +72,71 @@ impl RenderedLineCollection {
     pub fn height_up_to_index(&self, index: usize) -> i32 {
         self.entries.iter().take(index).height()
     }
+
+    pub fn is_match_in_viewport(&self, matched_line: MatchedLine, viewport: Viewport) -> bool {
+        let limit = viewport.limit();
+        let accumulated_height = self.entries.iter().skip(matched_line.line).height() as usize;
+        let line = &self.entries[matched_line.line];
+
+        if accumulated_height >= viewport.reverse_index {
+            for height in line.found_matches.as_ref().unwrap().iter() {
+                if accumulated_height + height <= limit {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn viewport_match(&self, viewport: &Viewport) -> Option<MatchedLine> {
+        let mut accumulated_height = 0;
+        let limit = viewport.limit();
+
+        for (i, line) in self.entries.iter().rev().enumerate() {
+            if accumulated_height >= viewport.reverse_index && line.found_matches.is_some() {
+                for (j, height) in line.found_matches.as_ref().unwrap().iter().enumerate() {
+                    if accumulated_height + height <= limit {
+                        return Some(MatchedLine::new(i, j));
+                    }
+                }
+            }
+
+            accumulated_height += line.height as usize;
+
+            if accumulated_height >= limit {
+                break;
+            }
+        }
+
+        None
+    }
+
+    pub fn first_match(&self) -> MatchedLine {
+        self.entries
+            .iter()
+            .rev()
+            .enumerate()
+            .find_match()
+            .unwrap()
+    }
+
+    pub fn next_match(&self, current_index: usize) -> Option<MatchedLine> {
+        self.entries
+            .iter()
+            .enumerate()
+            .skip(current_index + 1)
+            .find_match()
+    }
+
+    pub fn previous_match(&self, current_index: usize) -> Option<MatchedLine> {
+        self.entries
+            .iter()
+            .enumerate()
+            .rev()
+            .skip(self.entries.len() - current_index)
+            .find_match()
+    }
 }
 
 trait Height {
@@ -86,10 +153,19 @@ impl<'a, I> Height for I
 
 pub struct MatchedLine {
     pub line: usize,
-    pub matches: usize,
+    pub match_index: usize,
 }
 
-pub trait FindMatch {
+impl MatchedLine {
+    pub fn new(line: usize, match_index: usize) -> MatchedLine {
+        MatchedLine {
+            line: line,
+            match_index: match_index,
+        }
+    }
+}
+
+trait FindMatch {
     fn find_match(mut self) -> Option<MatchedLine>;
 }
 
@@ -97,11 +173,8 @@ impl<'a, I> FindMatch for I
     where I: Iterator<Item = (usize, &'a RenderedLine)>
 {
     fn find_match(mut self) -> Option<MatchedLine> {
-        if let Some(value) = self.find(|&index_and_line| index_and_line.1.found_matches.is_some()) {
-            Some(MatchedLine {
-                line: value.0,
-                matches: value.1.match_count() - 1,
-            })
+        if let Some(value) = self.find(|&idx_and_line| idx_and_line.1.found_matches.is_some()) {
+            Some(MatchedLine::new(value.0, value.1.match_count() - 1))
         } else {
             None
         }
@@ -111,7 +184,7 @@ impl<'a, I> FindMatch for I
 impl Index<usize> for RenderedLineCollection {
     type Output = RenderedLine;
 
-    fn index<'a>(&'a self, _index: usize) -> &'a RenderedLine {
+    fn index(&self, _index: usize) -> &RenderedLine {
         &self.entries[_index]
     }
 }

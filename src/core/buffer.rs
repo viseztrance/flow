@@ -18,6 +18,7 @@
 
 use std::cmp::{min, max};
 use std::cell::Cell;
+use std::ops::Index;
 
 use core::line::{Line, LineCollection};
 use core::filter::Filter;
@@ -43,12 +44,12 @@ impl Buffer {
         BufferLines::new(self, lines)
     }
 
-    pub fn increment_reverse_index(&self, value: i32, max_value: i32) {
+    pub fn increment_reverse_index(&self, value: i32, max_value: usize) {
         self.set_reverse_index(self.reverse_index.get() as i32 + value, max_value);
     }
 
-    pub fn set_reverse_index(&self, value: i32, max_value: i32) {
-        self.reverse_index.set(min(max(0, value), max_value) as usize);
+    pub fn set_reverse_index(&self, value: i32, max_value: usize) {
+        self.reverse_index.set(min(max(0, value) as usize, max_value));
     }
 
     pub fn is_scrolled(&self) -> bool {
@@ -80,6 +81,17 @@ impl<'a> BufferLines<'a> {
     pub fn set_context(&mut self, width: usize, query: Option<Query>) {
         self.width = Some(width);
         self.query = query;
+    }
+}
+
+impl<'a> Index<usize> for BufferLines<'a> {
+    type Output = Line;
+
+    fn index(&self, _index: usize) -> &Line {
+        self.into_iter()
+            .skip(_index)
+            .next()
+            .unwrap()
     }
 }
 

@@ -28,7 +28,7 @@ static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
 
 #[derive(PartialEq)]
 pub enum Highlight {
-    FirstVisibleOrLast,
+    VisibleOrLast,
     Next,
     Previous,
 }
