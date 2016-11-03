@@ -1,6 +1,6 @@
 [package]
 name = "flow"
-version = "0.1.0"
+version = "0.2.0"
 description = "A realtime log analyzer"
 authors = ["Daniel Mircea <daniel@viseztrance.com>"]
 repository = "https://github.com/viseztrance/flow"
