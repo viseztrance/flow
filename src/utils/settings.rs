@@ -36,7 +36,7 @@ impl Settings {
     pub fn from_args(args: Args) -> Settings {
         let config = ConfigFile::from_path(args.get_config())
             .unwrap_or(ConfigFile::from_current_dir()
-                .unwrap_or(ConfigFile::from_home_dir().unwrap_or(ConfigFile::default())));
+                .unwrap_or(ConfigFile::from_home_dir().unwrap_or_else(ConfigFile::default)));
 
         assert_quit!(!config.filters.is_empty(),
                      "At least one filter needs to be defined.");

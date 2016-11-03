@@ -18,6 +18,7 @@
 
 use std::process;
 use std::path::PathBuf;
+use std::fs;
 
 use utils::config_file::ConfigFile;
 
@@ -47,11 +48,15 @@ impl Args {
     }
 
     pub fn write_config(&self) {
-        let path = self.flag_init.as_ref().unwrap();
+        let mut path = PathBuf::from(self.flag_init.as_ref().unwrap());
+        if path.is_dir() {
+            path.push(".flow");
+        }
 
-        ConfigFile::write_sample(path);
+        ConfigFile::write_sample(&path);
 
-        let message = format!("Wrote config file at `{}`.", path);
+        let message = format!("Wrote config file at {:?}.",
+                              fs::canonicalize(path).unwrap());
         quit!(message);
     }
 

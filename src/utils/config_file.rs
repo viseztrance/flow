@@ -18,7 +18,7 @@
 
 use std::path::PathBuf;
 use std::{env, process};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{Read, Write};
 use toml;
 
@@ -70,14 +70,14 @@ impl ConfigFile {
         ConfigFile::new(DEFAULT)
     }
 
-    pub fn write_sample(path: &str) {
-        assert_quit!(!PathBuf::from(path).exists(),
-                     format!("{} file exists.", path));
+    pub fn write_sample(path: &PathBuf) {
+        assert_quit!(!path.exists(),
+                     format!("{:?} already exists.", fs::canonicalize(path).unwrap()));
 
         let mut file_handle = match File::create(path) {
             Ok(value) => value,
             Err(message) => {
-                let message = format!("{:?} couldn't be created - {}", path, message);
+                let message = format!("{} couldn't be created - {}", path.display(), message);
                 critical_quit!(message);
             }
         };
