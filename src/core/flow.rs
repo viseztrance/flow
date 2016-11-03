@@ -151,6 +151,14 @@ impl Flow {
         let count = pending_lines.len();
         self.lines.extend(pending_lines);
 
+        if self.frame.navigation.state == NavigationState::Search {
+            let mut state = self.frame.content.state.borrow_mut();
+            let new_highlighted_line = state.highlighted_line as i32 - count as i32;
+            if new_highlighted_line >= 0 {
+                state.highlighted_line -= count;
+            }
+        }
+
         self.reset_view_or_redo_search();
 
         if self.buffer_collection.selected_item().is_scrolled() {

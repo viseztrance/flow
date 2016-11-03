@@ -178,7 +178,7 @@ impl<'a> LinesPrinter<'a> {
                 self.frame.rendered_lines.create(actual_height, found_matches);
             }
 
-            if query.highlight == Highlight::Current {
+            if query.highlight == Highlight::Current && self.highlight_doesnt_require_update() {
                 self.highlight_current_item(&query.text, CURRENT_HIGHLIGHT_COLOR);
             } else if self.frame.navigation.search.matches_found {
                 self.update_current_and_highlight_item(query);
@@ -224,6 +224,11 @@ impl<'a> LinesPrinter<'a> {
         self.buffer_lines
             .buffer
             .set_reverse_index(index - self.frame.height / 2, self.frame.max_scroll_value());
+    }
+
+    fn highlight_doesnt_require_update(&self) -> bool {
+        let state = self.frame.content.state.borrow();
+        self.frame.rendered_lines[state.highlighted_line].found_matches.is_some()
     }
 }
 
@@ -299,10 +304,9 @@ impl<'a> HighlightState<'a> {
 
     fn update(&mut self, highlight: &Highlight) {
         match *highlight {
-            Highlight::VisibleOrLast => self.handle_visible_or_last(),
+            Highlight::VisibleOrLast | Highlight::Current => self.handle_visible_or_last(),
             Highlight::Next => self.handle_next(),
             Highlight::Previous => self.handle_previous(),
-            _ => unreachable!(),
         }
     }
 

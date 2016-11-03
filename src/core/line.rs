@@ -47,7 +47,8 @@ impl Line {
     }
 
     pub fn guess_height(&self, container_width: usize) -> usize {
-        max(1, self.width / container_width)
+        max(1,
+            (self.width as f32 / container_width as f32).ceil() as usize)
     }
 
     pub fn matches_for(&self, text: &str) -> Vec<(usize, &str)> {
