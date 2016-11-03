@@ -21,123 +21,43 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use getopts::{Options, Matches};
 use toml;
 
 use core::filter::Filter;
 
 static DEFAULT_LAST_LINES_SHOWN: usize = 10;
-static DEFAULT_MAX_LINES_STORED: usize = 5000;
+static DEFAULT_MAX_LINES_STORED: usize = 3000;
+
+#[derive(Debug, RustcDecodable)]
+pub struct Args {
+    arg_input: Option<String>,
+    flag_config: Option<String>,
+    flag_lines: Option<usize>,
+    flag_max: Option<usize>,
+}
 
 pub struct Settings {
-    pub values: SettingsValues,
-    pub config_file: ConfigFile,
-}
-
-pub struct SettingsBuilder {
-    program_name: String,
-    options: Options,
-    matches: Matches,
-}
-
-impl SettingsBuilder {
-    pub fn new(args: Vec<String>) -> SettingsBuilder {
-        let opts = build_opts();
-        let matches = opts.parse(&args[1..]).unwrap();
-
-        SettingsBuilder {
-            program_name: args.get(0).unwrap().clone(),
-            options: opts,
-            matches: matches,
-        }
-    }
-
-    pub fn construct(&self) -> Settings {
-        if self.matches.opt_present("h") {
-            quit!(self.usage());
-        }
-        let values = SettingsValues {
-            path_to_target_file: self.get_target(),
-            max_lines_count: self.get_max_lines_count(),
-            last_lines_count: self.get_last_lines_count(),
-        };
-
-        let config_file = ConfigFile::from_path(self.calculate_config_path());
-
-        Settings {
-            values: values,
-            config_file: config_file,
-        }
-    }
-
-    fn usage(&self) -> String {
-        let message = format!("Usage: {} FILE [options]", self.program_name);
-        self.options.usage(&message)
-    }
-
-    fn get_target(&self) -> String {
-        match self.matches.free.get(0) {
-            Some(value) => {
-                self.assert_file_exists(&PathBuf::from(value));
-                value.to_string()
-            }
-            None => {
-                quit!(self.usage(), 1);
-            }
-        }
-    }
-
-    fn calculate_config_path(&self) -> PathBuf {
-        match self.matches.opt_str("c") {
-            Some(value) => {
-                let path = PathBuf::from(value);
-                self.assert_file_exists(&path);
-                path
-            }
-            None => {
-                let mut current_dir_config_path = env::current_dir().unwrap();
-                current_dir_config_path.push(".flow");
-
-                let mut home_dir_config_path = env::home_dir().unwrap();
-                home_dir_config_path.push(".flow");
-
-                if current_dir_config_path.exists() {
-                    current_dir_config_path
-                } else if home_dir_config_path.exists() {
-                    home_dir_config_path
-                } else {
-                    quit!("No config file found.", 1);
-                }
-            }
-        }
-    }
-
-    fn get_last_lines_count(&self) -> usize {
-        match self.matches.opt_str("n") {
-            Some(value) => value.parse::<usize>().unwrap(),
-            None => DEFAULT_LAST_LINES_SHOWN,
-        }
-    }
-
-    fn get_max_lines_count(&self) -> usize {
-        match self.matches.opt_str("m") {
-            Some(value) => value.parse::<usize>().unwrap(),
-            None => DEFAULT_MAX_LINES_STORED,
-        }
-    }
-
-    fn assert_file_exists(&self, path: &PathBuf) {
-        if !path.exists() {
-            let message = format!("No file exists at provided location `{:?}`", path);
-            quit!(message, 2);
-        }
-    }
-}
-
-pub struct SettingsValues {
     pub path_to_target_file: String,
     pub last_lines_count: usize,
     pub max_lines_count: usize,
+    pub filters: Vec<Filter>,
+}
+
+impl Settings {
+    pub fn from_args(args: Args) -> Settings {
+        let config = ConfigFile::from_path(determine_config_path(args.flag_config));
+        let target = args.arg_input.unwrap_or_else(|| {
+            quit!("No input file provided");
+        });
+        assert_file_exists(&PathBuf::from(&target));
+
+        Settings {
+            path_to_target_file: target,
+            last_lines_count: args.flag_lines.unwrap_or(DEFAULT_LAST_LINES_SHOWN),
+            max_lines_count: args.flag_max.unwrap_or(DEFAULT_MAX_LINES_STORED),
+            filters: config.filters,
+        }
+    }
 }
 
 #[derive(RustcDecodable)]
@@ -176,23 +96,34 @@ impl ConfigFile {
     }
 }
 
-fn build_opts() -> Options {
-    let mut opts = Options::new();
-    opts.optopt("n",
-                "lines",
-                &format!("Output the last NUM lines. Default is {}.",
-                         DEFAULT_LAST_LINES_SHOWN),
-                "NUM");
-    opts.optopt("m",
-                "max",
-                &format!("Maximum amount of lines to be stored in memory. Default is {}.",
-                         DEFAULT_MAX_LINES_STORED),
-                "MAX");
-    opts.optopt("c",
-                "config",
-                "Path to a config file. Defaults to looking in the current directory and user \
-                 home.",
-                "CONFIG");
-    opts.optflag("h", "help", "Print this help menu.");
-    opts
+fn determine_config_path(path: Option<String>) -> PathBuf {
+    match path {
+        Some(value) => {
+            let pathbuf = PathBuf::from(value);
+            assert_file_exists(&pathbuf);
+            pathbuf
+        }
+        None => {
+            let mut current_dir_config_path = env::current_dir().unwrap();
+            current_dir_config_path.push(".flow");
+
+            let mut home_dir_config_path = env::home_dir().unwrap();
+            home_dir_config_path.push(".flow");
+
+            if current_dir_config_path.exists() {
+                current_dir_config_path
+            } else if home_dir_config_path.exists() {
+                home_dir_config_path
+            } else {
+                quit!("No config file found.", 1);
+            }
+        }
+    }
+}
+
+fn assert_file_exists(path: &PathBuf) {
+    if !path.exists() {
+        let message = format!("No file exists at provided location `{:?}`", path);
+        quit!(message, 2);
+    }
 }

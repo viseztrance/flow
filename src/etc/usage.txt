@@ -1,0 +1,12 @@
+Usage: flow <input> [options]
+       flow (--init=<path>)
+       flow (-h | --help)
+       flow (-v | --version)
+
+Options:
+  --init=<path>           Generates a sample config at the provided location.
+  -c, --config=<config>   Path to a config file. Defaults to looking in the current directory and user home.
+  -n, --lines=<lines>     Output the last NUM lines. Default is 10.
+  -m, --max=<max>         Maximum amount of lines to be stored in memory. Default is 3000.
+  -h, --help              Show this screen.
+  -v, --version           Show flow version number and exit.

@@ -16,15 +16,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+extern crate docopt;
 extern crate flow;
 
-use std::env;
+use docopt::Docopt;
 
-use flow::utils::settings::SettingsBuilder;
+use flow::utils::settings::{Settings, Args};
+
+const USAGE: &'static str = include_str!("../etc/usage.txt");
 
 fn main() {
-    let args = env::args().collect();
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
 
-    let settings = SettingsBuilder::new(args).construct();
+    let settings = Settings::from_args(args);
     flow::core::runner::execute(settings);
 }

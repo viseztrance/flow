@@ -116,7 +116,7 @@ impl RenderedLineCollection {
         None
     }
 
-    pub fn first_match(&self) -> MatchedLine {
+    pub fn last_match(&self) -> MatchedLine {
         self.entries
             .iter()
             .rev()

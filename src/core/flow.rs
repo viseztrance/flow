@@ -39,16 +39,15 @@ pub struct Flow {
 
 impl Flow {
     pub fn new(settings: Settings) -> Flow {
-        let menu_item_names = settings.config_file
-            .filters
+        let menu_item_names = settings.filters
             .iter()
             .map(|tab| tab.name.clone())
             .collect();
 
         Flow {
             frame: Frame::new(menu_item_names),
-            lines: LineCollection::new(settings.values.max_lines_count),
-            buffer_collection: BufferCollection::from_filters(settings.config_file.filters),
+            lines: LineCollection::new(settings.max_lines_count),
+            buffer_collection: BufferCollection::from_filters(settings.filters),
         }
     }
 

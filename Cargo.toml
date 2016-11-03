@@ -20,7 +20,7 @@ path = "src/lib.rs"
 
 [dependencies]
 libc = "0.2"
-getopts = "0.2"
+docopt = "0.6.86"
 toml = "0.2"
 rustc-serialize = "0.3"
 regex = "0.1"

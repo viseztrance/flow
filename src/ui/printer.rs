@@ -302,14 +302,14 @@ impl<'a> HighlightState<'a> {
             Highlight::VisibleOrLast => self.handle_visible_or_last(),
             Highlight::Next => self.handle_next(),
             Highlight::Previous => self.handle_previous(),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
     fn handle_visible_or_last(&mut self) {
         let matched_line = self.rendered_lines
             .viewport_match(&self.viewport)
-            .unwrap_or(self.rendered_lines.first_match());
+            .unwrap_or(self.rendered_lines.last_match());
 
         self.state.highlighted_line = self.rendered_lines.len() - matched_line.line - 1;
         self.state.highlighted_match = matched_line.match_index;

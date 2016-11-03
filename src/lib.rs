@@ -22,7 +22,7 @@ extern crate libc;
 extern crate regex;
 extern crate toml;
 extern crate rustc_serialize;
-extern crate getopts;
+extern crate docopt;
 extern crate unicode_width;
 extern crate unicode_segmentation;
 extern crate ncurses;

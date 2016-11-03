@@ -32,9 +32,9 @@ lazy_static! {
 pub fn execute(settings: Settings) {
     catch_signal();
 
-    let mut tail = Tail::new(settings.values.path_to_target_file.clone());
+    let mut tail = Tail::new(settings.path_to_target_file.clone());
 
-    let lines = Arc::new(Mutex::new(tail.read_lines(settings.values.last_lines_count)));
+    let lines = Arc::new(Mutex::new(tail.read_lines(settings.last_lines_count)));
 
     let reader_lines = lines.clone();
     let reader_thread = thread::spawn(move || {
