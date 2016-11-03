@@ -1,7 +1,7 @@
 Usage: flow <input> [options]
        flow (--init=<path>)
-       flow (-h | --help)
-       flow (-v | --version)
+       flow -h | --help
+       flow -v | --version
 
 Options:
   --init=<path>           Generates a sample config at the provided location.

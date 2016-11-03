@@ -21,7 +21,8 @@ extern crate flow;
 
 use docopt::Docopt;
 
-use flow::utils::settings::{Settings, Args};
+use flow::utils::args::Args;
+use flow::utils::settings::Settings;
 
 const USAGE: &'static str = include_str!("../etc/usage.txt");
 
@@ -30,6 +31,8 @@ fn main() {
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
 
-    let settings = Settings::from_args(args);
-    flow::core::runner::execute(settings);
+    args.process(|a| {
+        let settings = Settings::from_args(a);
+        flow::core::runner::execute(settings);
+    });
 }

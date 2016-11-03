@@ -37,7 +37,7 @@ impl Tail {
             Ok(value) => value,
             Err(message) => {
                 let message = format!("`{}` couldn't be opened - {}", file_path, message);
-                quit!(message, 2);
+                critical_quit!(message);
             }
         };
 

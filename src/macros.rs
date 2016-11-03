@@ -26,9 +26,12 @@ macro_rules! quit {
         println!("{}", $msg);
         process::exit(0)
     };
-    ($msg: expr, $code: expr) => {
+}
+
+macro_rules! critical_quit {
+    ($msg: expr) => {
         println!("{}", $msg);
-        process::exit($code)
+        process::exit(1)
     };
 }
 
