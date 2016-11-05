@@ -51,11 +51,14 @@ impl Flow {
         }
     }
 
-    pub fn render(&self) {
+    pub fn init(&self) {
+        readline::use_history();
+        readline::read_history();
         self.frame.render();
     }
 
     pub fn terminate(&self) {
+        readline::write_history();
         self.frame.destroy();
     }
 
@@ -130,9 +133,11 @@ impl Flow {
                 }
             }
             SearchAction::FindNextMatch => {
+                readline::add_history();
                 self.perform_search(Highlight::Next);
             }
             SearchAction::FindPreviousMatch => {
+                readline::add_history();
                 self.perform_search(Highlight::Previous);
             }
             SearchAction::ToggleFilterMode => {

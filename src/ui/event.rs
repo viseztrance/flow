@@ -17,6 +17,7 @@
  */
 
 use ui::input::*;
+use ui::readline;
 use ui::navigation::State as NavigationState;
 
 pub enum Direction {
@@ -97,7 +98,9 @@ impl EventBuilder {
             Input::Kb(Key::Char('m'), Some(Modifier::Alt(_))) => {
                 Some(Event::Search(SearchAction::ToggleFilterMode))
             }
-            Input::Kb(Key::Escape, None) => Some(Event::Navigation(NavigationState::Menu)),
+            Input::Kb(Key::Escape, None) if !readline::is_history() => {
+                Some(Event::Navigation(NavigationState::Menu))
+            }
             _ => self.create_input_event(),
         }
     }

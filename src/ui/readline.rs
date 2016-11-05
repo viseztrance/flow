@@ -16,17 +16,24 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::env;
 use libc::{FILE, free, c_void, c_char};
 use std::ffi::{CStr, CString};
+
 use ncurses::*;
 use unicode_width::UnicodeWidthStr;
 use unicode_segmentation::UnicodeSegmentation;
 
 use ext::readline::*;
 
+const HISTORY_FILENAME: &'static str = ".flow_history";
+const MAX_HISTORY_LINES: i32 = 1000;
+const MIN_HISTORY_LINE_WIDTH: usize = 2;
+
 static mut input: i32 = 0;
 static mut input_available: bool = false;
 static mut command_window: Option<WINDOW> = None;
+static mut last_history_item: &'static str = "\0";
 
 pub fn init() {
     unsafe {
@@ -60,6 +67,46 @@ pub fn forward_input(key: i32) {
         input = key;
         input_available = true;
         rl_callback_read_char();
+    }
+}
+
+pub fn use_history() {
+    unsafe {
+        history::using_history();
+    }
+}
+
+pub fn add_history() {
+    let buffer = read_buffer();
+
+    unsafe {
+        if last_history_item != buffer && buffer.width() > MIN_HISTORY_LINE_WIDTH {
+            history::add_history(rl_line_buffer);
+            last_history_item = buffer;
+            history::history_set_pos(history::history_length);
+        }
+    }
+}
+
+pub fn read_history() {
+    unsafe {
+        history::read_history(history_file_path());
+    }
+}
+
+pub fn write_history() {
+    let path = history_file_path();
+
+    unsafe {
+        history::write_history(path);
+        history::history_truncate_file(path, MAX_HISTORY_LINES);
+    }
+}
+
+pub fn is_history() -> bool {
+    unsafe {
+        rl_readline_state & RL_STATE_ISEARCH > 0 || rl_readline_state & RL_STATE_NSEARCH > 0 ||
+        rl_readline_state & RL_STATE_SEARCH > 0
     }
 }
 
@@ -132,6 +179,14 @@ extern "C" fn handle_input(line_ptr: *mut c_char) {
     unsafe {
         free(line_ptr as *mut c_void);
     }
+}
+
+fn history_file_path() -> *const i8 {
+    let mut path = env::home_dir().unwrap();
+    path.push(HISTORY_FILENAME);
+    let path_cstring = CString::new(path.to_str().unwrap()).unwrap();
+
+    path_cstring.as_ptr()
 }
 
 unsafe fn cstr_ptr_to_str<'a>(c_str: *const i8) -> &'a str {

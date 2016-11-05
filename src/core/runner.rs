@@ -44,7 +44,7 @@ pub fn execute(settings: Settings) {
     let consumer_lines = lines.clone();
     let consumer_thread = thread::spawn(move || {
         let mut flow = Flow::new(settings);
-        flow.render();
+        flow.init();
         flow.process(consumer_lines);
         flow.terminate();
     });

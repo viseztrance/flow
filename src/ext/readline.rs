@@ -18,6 +18,32 @@
 
 use libc::{c_int, c_char, FILE};
 
+pub const RL_STATE_NONE: i32 = 0x000000;
+pub const RL_STATE_INITIALIZING: i32 = 0x000001;
+pub const RL_STATE_INITIALIZED: i32 = 0x000002;
+pub const RL_STATE_TERMPREPPED: i32 = 0x000004;
+pub const RL_STATE_READCMD: i32 = 0x000008;
+pub const RL_STATE_METANEXT: i32 = 0x000010;
+pub const RL_STATE_DISPATCHING: i32 = 0x000020;
+pub const RL_STATE_MOREINPUT: i32 = 0x000040;
+pub const RL_STATE_ISEARCH: i32 = 0x000080;
+pub const RL_STATE_NSEARCH: i32 = 0x000100;
+pub const RL_STATE_SEARCH: i32 = 0x000200;
+pub const RL_STATE_NUMERICARG: i32 = 0x000400;
+pub const RL_STATE_MACROINPUT: i32 = 0x000800;
+pub const RL_STATE_MACRODEF: i32 = 0x001000;
+pub const RL_STATE_OVERWRITE: i32 = 0x002000;
+pub const RL_STATE_COMPLETING: i32 = 0x004000;
+pub const RL_STATE_SIGHANDLER: i32 = 0x008000;
+pub const RL_STATE_UNDOING: i32 = 0x010000;
+pub const RL_STATE_INPUTPENDING: i32 = 0x020000;
+pub const RL_STATE_TTYCSAVED: i32 = 0x040000;
+pub const RL_STATE_CALLBACK: i32 = 0x080000;
+pub const RL_STATE_VIMOTION: i32 = 0x100000;
+pub const RL_STATE_MULTIKEY: i32 = 0x200000;
+pub const RL_STATE_VICMDONCE: i32 = 0x400000;
+pub const RL_STATE_DONE: i32 = 0x800000;
+
 pub type RlCommandFuncT = Option<extern "C" fn(c_int, c_int) -> c_int>;
 pub type RlVcpfuncT = Option<extern "C" fn(*mut c_char)>;
 pub type RlVoidfuncT = Option<extern "C" fn()>;
@@ -27,6 +53,7 @@ pub type RlHookFuncT = Option<extern "C" fn() -> c_int>;
 
 #[link(name = "readline")]
 extern "C" {
+    pub static mut rl_readline_state: c_int;
     pub static mut rl_display_prompt: *mut c_char;
     pub static mut rl_line_buffer: *mut c_char;
     pub static mut rl_point: c_int;
@@ -46,4 +73,21 @@ extern "C" {
     pub fn rl_insert(_: c_int, _: c_int) -> c_int;
     pub fn rl_callback_handler_install(prompt: *const c_char, callback: RlVcpfuncT);
     pub fn rl_callback_handler_remove();
+}
+
+
+pub mod history {
+    use libc::{c_int, c_char};
+
+    #[link(name = "readline")]
+    extern "C" {
+        pub static mut history_length: c_int;
+
+        pub fn using_history();
+        pub fn add_history(input: *const c_char);
+        pub fn read_history(filename: *const c_char) -> c_int;
+        pub fn write_history(filename: *const c_char) -> c_int;
+        pub fn history_truncate_file(filename: *const c_char, nlines: c_int) -> c_int;
+        pub fn history_set_pos(pos: c_int) -> c_int;
+    }
 }
