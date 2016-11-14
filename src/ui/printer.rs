@@ -41,7 +41,7 @@ impl Print for Line {
                 for component in &value.items {
                     component.print(content);
                 }
-                waddch(content.window, '\n' as u64);
+                waddch(content.window, '\n' as u32);
             }
             None => {
                 wprintw(content.window, &format!("{}\n", self.content_without_ansi));
