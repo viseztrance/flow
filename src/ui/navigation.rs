@@ -64,13 +64,9 @@ impl Navigation {
         }
     }
 
-    pub fn resize(&self, position_x: i32, position_y: i32) {
-        mvwin(self.search.window, position_y, position_x);
-        mvwin(self.search.input_field.window,
-              position_y,
-              position_x + HEIGHT);
-        wrefresh(self.search.input_field.window);
-        mvwin(self.menu.window, position_y, position_x);
+    pub fn resize(&self, container_width: i32, offset: i32) {
+        self.search.resize(container_width, offset);
+        mvwin(self.menu.window, offset, 0);
 
         self.render();
     }

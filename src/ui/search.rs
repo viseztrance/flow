@@ -71,6 +71,13 @@ impl Search {
         readline::move_cursor();
     }
 
+    pub fn resize(&self, container_width: i32, offset: i32) {
+        mvwin(self.window, offset, 0);
+
+        self.input_field.resize(container_width, offset);
+        self.options.resize(container_width);
+    }
+
     pub fn build_query(&self, highlight: Highlight) -> Option<Query> {
         if self.input_field.is_empty() {
             None
@@ -135,6 +142,12 @@ impl InputField {
         wattron(self.window, color_pair);
     }
 
+    fn resize(&self, container_width: i32, offset: i32) {
+        wresize(self.window, 1, container_width - OPTIONS_WIDTH);
+        mvwin(self.window, offset, 1);
+        wrefresh(self.window);
+    }
+
     pub fn read(&self, keys: Vec<i32>) -> State {
         for key in keys {
             readline::forward_input(key);
@@ -176,6 +189,12 @@ impl Options {
 
         self.print_navigation();
         self.print_filter(color_pair);
+    }
+
+    fn resize(&self, container_width: i32) {
+        wresize(self.window, 1, OPTIONS_WIDTH);
+        mvderwin(self.window, 0, container_width - OPTIONS_WIDTH);
+        wrefresh(self.window);
     }
 
     fn print_navigation(&self) {

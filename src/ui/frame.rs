@@ -81,7 +81,7 @@ impl Frame {
         getmaxyx(stdscr(), &mut self.height, &mut self.width);
 
         self.content.resize(self.width);
-        self.navigation.resize(0, self.content_height());
+        self.navigation.resize(self.width, self.content_height());
     }
 
     pub fn print(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
