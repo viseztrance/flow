@@ -16,171 +16,224 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::process;
 use regex::Regex;
 use rustc_serialize::{Decodable, Decoder};
 
-#[derive(Clone)]
+#[derive(PartialEq)]
+pub enum Kind {
+    Empty,
+    Start,
+    Content,
+    End,
+    StartEnd,
+    StartContentEnd,
+}
+
 pub enum Match {
-    StartsWith,
-    Contains,
-    EndsWith,
+    Start,
+    Content,
+    End,
 }
 
 #[derive(Clone)]
-pub enum Kind {
-    Content,
-    StartEnd,
-    StartContentEnd,
+pub struct BoundaryFilter {
+    pub regex: Regex,
+    pub has_named_match: bool,
+}
+
+impl BoundaryFilter {
+    fn is_match(&self, text: &str) -> bool {
+        if self.has_named_match {
+            self.is_named_match(text)
+        } else {
+            self.regex.is_match(text)
+        }
+    }
+
+    fn is_named_match(&self, text: &str) -> bool {
+        if let Some(captures) = self.regex.captures(text) {
+            captures.name("matching").is_some()
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct Filter {
     pub name: String,
-    pub starts_with: Option<Regex>,
-    pub contains: Option<Regex>,
-    pub ends_with: Option<Regex>,
-    pub last_match: Match,
-    pub kind: Kind,
+    pub content: Option<Regex>,
+    pub start: Option<BoundaryFilter>,
+    pub end: Option<BoundaryFilter>,
 }
 
-impl Filter {
-    fn new(name: String,
-           starts_with: Option<Regex>,
-           contains: Option<Regex>,
-           ends_with: Option<Regex>)
-           -> Filter {
+pub enum ParserResult {
+    Match,
+    NoMatch,
+    LastMatch(bool),
+    Invalid,
+}
 
-        let kind = determine_kind(&starts_with, &contains, &ends_with);
-        let last_match = match kind {
-            Kind::Content => Match::Contains,
-            _ => Match::StartsWith,
+pub struct Parser {
+    pub filter: Filter,
+    pub kind: Kind,
+    last_match: Match,
+}
+
+impl Parser {
+    pub fn new(filter: Filter) -> Parser {
+        let kind = if filter.start.is_some() && filter.content.is_some() && filter.end.is_some() {
+            Kind::StartContentEnd
+        } else if filter.start.is_some() && filter.end.is_some() {
+            Kind::StartEnd
+        } else if filter.content.is_some() {
+            Kind::Content
+        } else if filter.start.is_some() {
+            Kind::Start
+        } else if filter.end.is_some() {
+            Kind::End
+        } else {
+            Kind::Empty
         };
 
-        Filter {
-            name: name,
-            starts_with: starts_with,
-            contains: contains,
-            ends_with: ends_with,
+        Parser {
+            filter: filter,
             kind: kind,
-            last_match: last_match,
+            last_match: Match::Start,
         }
     }
 
-    pub fn is_match(&mut self, text: &str) -> bool {
+    pub fn matches(&mut self, text: &str) -> ParserResult {
         match self.kind {
-            Kind::Content => self.handle_content(text),
-            Kind::StartContentEnd => self.handle_start_content_end(text),
+            Kind::Start => self.handle_start(text),
+            Kind::End => self.handle_end(text),
             Kind::StartEnd => self.handle_start_end(text),
+            Kind::StartContentEnd => self.handle_start_content_end(text),
+            _ => unreachable!(),
         }
     }
 
-    fn handle_content(&self, text: &str) -> bool {
-        match self.contains {
-            Some(ref value) => value.is_match(text),
-            None => true,
+    fn handle_start(&mut self, text: &str) -> ParserResult {
+        let start = self.filter.start.as_ref().unwrap();
+        let mut result = ParserResult::Match;
+
+        if start.regex.is_match(text) {
+            self.last_match = Match::Start;
+            result = ParserResult::LastMatch(true);
+
+            if start.has_named_match {
+                if !start.is_named_match(text) {
+                    result = ParserResult::Invalid;
+                }
+            }
         }
+
+        result
     }
 
-    fn handle_start_content_end(&mut self, text: &str) -> bool {
+    fn handle_end(&mut self, text: &str) -> ParserResult {
         match self.last_match {
-            Match::StartsWith => {
-                let result = self.ends_with.as_ref().unwrap().is_match(text);
-                if result {
-                    self.last_match = Match::EndsWith;
-                }
-                result
-            }
-            Match::Contains => {
-                let mut result = self.contains.as_ref().unwrap().is_match(text);
-                if result {
-                    return result;
-                }
+            Match::Start => {
+                if self.filter.end.as_ref().unwrap().is_match(text) {
+                    self.last_match = Match::End;
 
-                result = self.starts_with.as_ref().unwrap().is_match(text);
-                if result {
-                    self.last_match = Match::StartsWith
+                    ParserResult::Match
+                } else {
+                    ParserResult::NoMatch
                 }
-                result
             }
-            Match::EndsWith => {
-                let result = self.contains.as_ref().unwrap().is_match(text);
-                if result {
-                    self.last_match = Match::Contains;
+            Match::End => {
+                let end = self.filter.end.as_ref().unwrap();
+
+                if end.regex.is_match(text) {
+                    if end.is_named_match(text) {
+                        ParserResult::LastMatch(true)
+                    } else {
+                        self.last_match = Match::Start;
+                        ParserResult::LastMatch(false)
+                    }
+                } else {
+                    ParserResult::Match
                 }
-                result
             }
+            _ => unreachable!(),
         }
     }
 
-    fn handle_start_end(&mut self, text: &str) -> bool {
+    fn handle_start_end(&mut self, text: &str) -> ParserResult {
         match self.last_match {
-            Match::StartsWith => {
-                let result = self.ends_with.as_ref().unwrap().is_match(text);
-                if result {
-                    self.last_match = Match::EndsWith;
+            Match::Start => {
+                if self.filter.end.as_ref().unwrap().is_match(text) {
+                    self.last_match = Match::End;
+
+                    ParserResult::Match
+                } else {
+                    ParserResult::NoMatch
                 }
-                result
             }
-            Match::EndsWith => {
-                let result = self.starts_with.as_ref().unwrap().is_match(text);
-                if result {
-                    self.last_match = Match::StartsWith;
+            Match::End => self.handle_start(text),
+            _ => unreachable!(),
+        }
+    }
+
+    fn handle_start_content_end(&mut self, text: &str) -> ParserResult {
+        match self.last_match {
+            Match::Start => {
+                if self.filter.end.as_ref().unwrap().is_match(text) {
+                    self.last_match = Match::End;
+
+                    ParserResult::Match
+                } else {
+                    ParserResult::NoMatch
                 }
-                true
             }
-            _ => unreachable!("Unexpected previous match found!"),
+            Match::Content => self.handle_start(text),
+            Match::End => {
+                if self.filter.end.as_ref().unwrap().regex.is_match(text) ||
+                   self.filter.start.as_ref().unwrap().regex.is_match(text) {
+                    self.last_match = Match::Start;
+                    ParserResult::Invalid
+                } else {
+                    if self.filter.content.as_ref().unwrap().is_match(text) {
+                        self.last_match = Match::Content;
+                    }
+                    ParserResult::Match
+                }
+            }
         }
     }
 }
 
 impl Decodable for Filter {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Filter, D::Error> {
-        d.read_struct("Filter", 2, |d| {
-            let name = try!(d.read_struct_field("name", 0, |d| d.read_str()));
-            let starts_with = read_struct_field(d, "starts_with", 1);
-            let contains = read_struct_field(d, "contains", 1);
-            let ends_with = read_struct_field(d, "ends_with", 1);
-
-            let filter = Filter::new(name, starts_with, contains, ends_with);
+    fn decode<D: Decoder>(decoder: &mut D) -> Result<Filter, D::Error> {
+        decoder.read_struct("Filter", 2, |d| {
+            let filter = Filter {
+                name: try!(d.read_struct_field("name", 0, |d| d.read_str())),
+                content: field_to_regex(d, "contains", 1),
+                start: regex_to_boundary(field_to_regex(d, "starts_with", 2)),
+                end: regex_to_boundary(field_to_regex(d, "ends_with", 3)),
+            };
 
             Ok(filter)
         })
     }
 }
 
-fn determine_kind(starts_with: &Option<Regex>,
-                  contains: &Option<Regex>,
-                  ends_with: &Option<Regex>)
-                  -> Kind {
-    if starts_with.is_none() && contains.is_none() && ends_with.is_none() {
-        Kind::Content
-    } else if contains.is_some() {
-        if starts_with.is_some() {
-            assert_quit!(ends_with.is_some(),
-                         "Expected an `ends_with` value to be found alongside `starts_with`.");
-
-            Kind::StartContentEnd
-        } else {
-            assert_quit!(ends_with.is_none(),
-                         "Expected a `starts_with` value to be found alongside `ends_with`.");
-
-            Kind::Content
-        }
-    } else {
-        assert_quit!(starts_with.is_some(),
-                     "Expected a `starts_with` value to be found alongside `ends_with`.");
-
-        assert_quit!(ends_with.is_some(),
-                     "Expected an `ends_with` value to be found alongside `starts_with`.");
-
-        Kind::StartEnd
-    }
-}
-
-fn read_struct_field<D: Decoder>(decoder: &mut D, name: &str, idx: usize) -> Option<Regex> {
+fn field_to_regex<D: Decoder>(decoder: &mut D, name: &str, idx: usize) -> Option<Regex> {
     match decoder.read_struct_field(name, idx, |d| d.read_str()) {
         Ok(val) => Some(Regex::new(&val).unwrap()),
         Err(_) => None,
+    }
+}
+
+fn regex_to_boundary(regex: Option<Regex>) -> Option<BoundaryFilter> {
+    match regex {
+        Some(val) => {
+            Some(BoundaryFilter {
+                has_named_match: val.capture_names().any(|c| c == Some("matching")),
+                regex: val,
+            })
+        }
+        None => None,
     }
 }

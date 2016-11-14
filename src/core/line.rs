@@ -18,9 +18,12 @@
 
 use std::cmp::max;
 use std::collections::VecDeque;
+use std::iter::{Rev, DoubleEndedIterator};
 
 use unicode_width::UnicodeWidthStr;
 
+use core::filter::{Filter, Parser as FilterParser, Kind as FilterKind,
+                   ParserResult as FilterParserResult};
 use utils::ansi_decoder::{ComponentCollection, AnsiStr};
 
 pub struct Line {
@@ -30,7 +33,7 @@ pub struct Line {
 }
 
 impl Line {
-    fn new(content: String) -> Line {
+    pub fn new(content: String) -> Line {
         let has_ansi = content.has_ansi_escape_sequence();
 
         let (content_without_ansi, components) = if has_ansi {
@@ -95,5 +98,90 @@ impl Extend<String> for LineCollection {
         }
 
         self.clear_excess();
+    }
+}
+
+
+pub struct ParserState<'a, I>
+    where I: DoubleEndedIterator<Item = &'a Line>
+{
+    iterator: I,
+    parser: FilterParser,
+    pending: Vec<&'a Line>,
+}
+
+impl<'a, I> ParserState<'a, I>
+    where I: DoubleEndedIterator<Item = &'a Line>
+{
+    fn handle_empty(&mut self) -> Option<I::Item> {
+        self.iterator.next()
+    }
+
+    fn handle_content(&mut self) -> Option<I::Item> {
+        let matcher = self.parser.filter.content.as_ref().unwrap();
+
+        (&mut self.iterator).filter(|line| matcher.is_match(&line.content_without_ansi)).next()
+    }
+
+    fn handle_boundaries(&mut self) -> Option<I::Item> {
+        if self.pending.is_empty() {
+            // There are no invalid pending entries for `End` filters
+            let mut match_found = self.parser.kind == FilterKind::End;
+
+            for line in &mut self.iterator {
+                match self.parser.matches(&line.content_without_ansi) {
+                    FilterParserResult::Match => self.pending.push(line),
+                    FilterParserResult::LastMatch(append) => {
+                        match_found = true;
+                        if append {
+                            self.pending.push(line);
+                        }
+                        break;
+                    }
+                    FilterParserResult::Invalid => self.pending.clear(),
+                    FilterParserResult::NoMatch => {}
+                }
+            }
+            if !match_found {
+                return None;
+            }
+
+            self.pending.reverse();
+        }
+
+        self.pending.pop()
+    }
+}
+
+pub trait Parser<'a>: Iterator<Item = &'a Line> {
+    fn parse(self, filter: Filter) -> ParserState<'a, Rev<Self>>
+        where Self: DoubleEndedIterator + Sized;
+}
+
+impl<'a, I> Parser<'a> for I
+    where I: Iterator<Item = &'a Line>
+{
+    fn parse(self, filter: Filter) -> ParserState<'a, Rev<Self>>
+        where Self: DoubleEndedIterator + Sized
+    {
+        ParserState {
+            iterator: self.rev(),
+            pending: vec![],
+            parser: FilterParser::new(filter),
+        }
+    }
+}
+
+impl<'a, I> Iterator for ParserState<'a, I>
+    where I: DoubleEndedIterator<Item = &'a Line>
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.parser.kind {
+            FilterKind::Empty => self.handle_empty(),
+            FilterKind::Content => self.handle_content(),
+            _ => self.handle_boundaries(),
+        }
     }
 }

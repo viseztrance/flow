@@ -1,14 +1,15 @@
 [[filters]]
-name = "Everything"
+name = "All"
 
 [[filters]] # Matches lines containing xyz (ignores case)
 name = "Having xyz"
 contains = "(?i)xyz"
 
-[[filters]] # Matches everything between the starts_with and ends_with boundaries
+[[filters]]
 name = "Errors"
-starts_with = "Started GET"
-ends_with = "Completed 500"
+contains = "(?i)xyz"
+starts_with = "Started (?P<matching>POST)?"
+ends_with = "Completed (?P<matching>500)?"
 
 #
 # For further information on how to use the regex syntax please visit:

@@ -18,10 +18,39 @@
 
 extern crate toml;
 extern crate regex;
+#[macro_use]
+extern crate lazy_static;
 extern crate flow;
 
 use regex::Regex;
 use flow::core::filter::Filter;
+use flow::core::line::{Line, Parser};
+
+lazy_static! {
+    static ref LINES: Vec<Line> = vec![
+        "Setting database",
+        "Started POST",
+        "dolor needle",
+        "sit amen",
+        "Completed 200",
+        "Started GET",
+        "quo natum",
+        "mel elit needle",
+        "Completed 200",
+        "Started GET",
+        "graece ceteros",
+        "neglegentur id",
+        "Completed 200",
+        "Started GET",
+        "electram needle",
+        "sit amen",
+        "Completed 404",
+        "Started GET",
+        "concludaturque mel",
+        "sit ea NEEDLE ignota",
+        "Completed 200",
+    ].iter().map(|x| Line::new(x.to_string())).collect::<Vec<_>>();
+}
 
 #[test]
 fn decodes_named_filter() {
@@ -30,9 +59,9 @@ fn decodes_named_filter() {
     "##);
 
     assert_eq!("All", filter.name);
-    assert!(filter.starts_with.is_none());
-    assert!(filter.contains.is_none());
-    assert!(filter.ends_with.is_none());
+    assert!(filter.start.is_none());
+    assert!(filter.content.is_none());
+    assert!(filter.end.is_none());
 }
 
 #[test]
@@ -43,146 +72,228 @@ fn decodes_filter_with_content_constraint() {
     "##);
 
     assert_eq!("Having content constraints", filter.name);
-    assert!(filter.starts_with.is_none());
+    assert!(filter.start.is_none());
     let expected_contains = Some(Regex::new("body value").unwrap());
-    assert_eq!(expected_contains, filter.contains);
-    assert!(filter.ends_with.is_none());
+    assert_eq!(expected_contains, filter.content);
+    assert!(filter.end.is_none());
 }
 
 #[test]
 fn decodes_filter_with_boundary_constraints() {
     let filter = toml_string_to_filter(r##"
        name = "Having boundary constraints"
-       starts_with = "start value"
-       ends_with = "end value"
+       starts_with = "start marker"
+       ends_with = "end marker"
     "##);
 
-    assert_eq!("Having boundary constraints", filter.name);
+    let expected_starts_with = Regex::new("start marker").unwrap();
+    let expected_ends_with = Regex::new("end marker").unwrap();
 
-    let expected_starts_with = Some(Regex::new("start value").unwrap());
-    let expected_ends_with = Some(Regex::new("end value").unwrap());
-    assert_eq!(expected_starts_with, filter.starts_with);
-    assert!(filter.contains.is_none());
-    assert_eq!(expected_ends_with, filter.ends_with);
+    assert_eq!("Having boundary constraints", filter.name);
+    assert!(filter.content.is_none());
+    assert_eq!(expected_starts_with, filter.start.unwrap().regex);
+    assert_eq!(expected_ends_with, filter.end.unwrap().regex);
 }
 
 #[test]
-fn decodes_filter_with_boundary_and_content_constraints() {
+fn decodes_filter_with_boundary_match_constraints() {
     let filter = toml_string_to_filter(r##"
        name = "Having many constraints"
-       starts_with = "start value"
        contains = "body value"
-       ends_with = "end value"
+       starts_with = "(?P<matching>start) body value"
+       ends_with = "(?P<other>end) body value"
     "##);
 
     assert_eq!("Having many constraints", filter.name);
 
-    let expected_starts_with = Some(Regex::new("start value").unwrap());
-    let expected_contains = Some(Regex::new("body value").unwrap());
-    let expected_ends_with = Some(Regex::new("end value").unwrap());
-    assert_eq!(expected_starts_with, filter.starts_with);
-    assert_eq!(expected_contains, filter.contains);
-    assert_eq!(expected_ends_with, filter.ends_with);
+    let expected_body_content = Regex::new("body value").unwrap();
+    assert!(filter.start.unwrap().has_named_match);
+    assert_eq!(expected_body_content, filter.content.unwrap());
+    assert!(!filter.end.unwrap().has_named_match);
 }
 
 #[test]
 fn having_no_constraints_matches_everything() {
-    let mut filter = toml_string_to_filter(r##"
+    let filter = toml_string_to_filter(r##"
        name = "All"
     "##);
 
-    for value in vec!["", "lorem ipsum", "こんにちは！"] {
-        assert!(filter.is_match(&value.to_string()));
-    }
+    let lines = vec![Line::new("".to_string()),
+                     Line::new("lorem ipsum".to_string()),
+                     Line::new("こんにちは！".to_string())];
+    assert_eq!(3, lines.iter().parse(filter).count());
 }
 
 #[test]
 fn having_content_constraint_matches_against_provided_value() {
-    let mut filter = toml_string_to_filter(r##"
+    let filter = toml_string_to_filter(r##"
        name = "All"
        contains = "(?i)or"
     "##);
 
-    let values = vec!["Lorem ipsum".to_string(), "Legislature".to_string(), "Folklore".to_string()];
-
-    let actual = values.iter().filter(|&x| filter.is_match(&x)).collect::<Vec<_>>();
-    let expected = vec!["Lorem ipsum", "Folklore"];
-
+    let lines = vec![Line::new("Lorem ipsum".to_string()),
+                     Line::new("Legislature".to_string()),
+                     Line::new("Folklore".to_string())];
+    let actual = lines.iter()
+        .parse(filter)
+        .map(|line| line.content_without_ansi.clone())
+        .collect::<Vec<_>>();
+    let expected = vec!["Folklore", "Lorem ipsum"];
     assert_eq!(expected, actual);
 }
 
 #[test]
-fn having_boundary_constraints_matches_everything_between_the_two() {
-    let mut filter = toml_string_to_filter(r##"
-       name = "Story"
-       starts_with = "Once upon a time"
-       ends_with = "The end"
+fn filters_entries_by_start_boundary() {
+    let filter = toml_string_to_filter(r##"
+       name = "GET requests"
+       starts_with = "Started (?P<matching>GET)?"
     "##);
 
-    let values = vec![
-        "And so the story starts",
-        "Once upon a time,",
-        "There was a castle",
-        "and if I recall correctly",
-        "there was also a dragon",
-        "The end",
-        "And so the test starts",
-        "Once upon a time,",
-        "There was a programmer",
-        "and was also a laptop.",
-        "The end",
-    ].into_iter().map(|x| x.to_string());
-
-    let actual = values.rev().filter(|ref x| filter.is_match(&x)).collect::<Vec<_>>();
-    let expected = vec![
-        "Once upon a time,",
-        "There was a castle",
-        "and if I recall correctly",
-        "there was also a dragon",
-        "The end",
-        "Once upon a time,",
-        "There was a programmer",
-        "and was also a laptop.",
-        "The end",
-    ].into_iter().rev().map(|x| x.to_string()).collect::<Vec<_>>();
-
-    assert_eq!(expected, actual);
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 404",
+                        "sit amen",
+                        "electram needle",
+                        "Started GET",
+                        "Completed 200",
+                        "neglegentur id",
+                        "graece ceteros",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",];
+    assert_line_content(filter, expected);
 }
 
 #[test]
-fn having_boundary_and_content_constraints_matches_content_between_the_end_points() {
-    let mut filter = toml_string_to_filter(r##"
-       name = "Story"
-       starts_with = "Once upon a time"
-       contains = "(?i)there was"
-       ends_with = "The end"
+fn filters_entries_by_end_boundary() {
+    let filter = toml_string_to_filter(r##"
+       name = "GET requests"
+       ends_with = "Completed (?P<matching>200)?"
     "##);
 
-    let values = vec![
-        "And so the story starts",
-        "Once upon a time,",
-        "There was a castle",
-        "and if I recall correctly",
-        "there was also a dragon",
-        "The end",
-        "And so the test starts",
-        "Once upon a time,",
-        "There was a programmer",
-        "and was also a laptop.",
-        "The end",
-    ].into_iter().map(|x| x.to_string());
+    let expected = vec!["Completed 200",
+                         "sit ea NEEDLE ignota",
+                         "concludaturque mel",
+                         "Started GET",
+                         "Completed 200",
+                         "neglegentur id",
+                         "graece ceteros",
+                         "Started GET",
+                         "Completed 200",
+                         "mel elit needle",
+                         "quo natum",
+                         "Started GET",
+                         "Completed 200",
+                         "sit amen",
+                         "dolor needle",
+                         "Started POST",
+                         "Setting database",];
+    assert_line_content(filter, expected);
+}
 
-    let actual = values.rev().filter(|ref x| filter.is_match(&x)).collect::<Vec<_>>();
-    let expected = vec![
-        "Once upon a time,",
-        "There was a castle",
-        "there was also a dragon",
-        "The end",
-        "Once upon a time,",
-        "There was a programmer",
-        "The end",
-    ].into_iter().rev().map(|x| x.to_string()).collect::<Vec<_>>();
+#[test]
+fn filters_entries_by_boundary_with_matcher() {
+    let filter = toml_string_to_filter(r##"
+       name = "Having many constraints"
+       starts_with = "Started (?P<matching>GET)?"
+       ends_with = "Completed (?P<matching>200)?"
+    "##);
 
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 200",
+                        "neglegentur id",
+                        "graece ceteros",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",];
+    assert_line_content(filter, expected);
+}
+
+#[test]
+fn filters_entries_by_boundary_without_matcher() {
+    let filter = toml_string_to_filter(r##"
+       name = "GET requests"
+       starts_with = "Started (?P<matching>GET)?"
+       ends_with = "Completed"
+    "##);
+
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 404",
+                        "sit amen",
+                        "electram needle",
+                        "Started GET",
+                        "Completed 200",
+                        "neglegentur id",
+                        "graece ceteros",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",];
+    assert_line_content(filter, expected);
+}
+
+#[test]
+fn filters_entries_by_main_content_and_boundary_with_matcher() {
+    let filter = toml_string_to_filter(r##"
+       name = "Succesful GET requests"
+       contains = "(?i)needle"
+       starts_with = "Started (?P<matching>GET)?"
+       ends_with = "Completed (?P<matching>200)?"
+    "##);
+
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",];
+    assert_line_content(filter, expected);
+}
+
+#[test]
+fn filters_entries_by_main_content_and_boundary_without_matcher() {
+    let filter = toml_string_to_filter(r##"
+       name = "GET requests"
+       contains = "(?i)needle"
+       starts_with = "Started (?P<matching>GET)?"
+       ends_with = "Completed"
+    "##);
+
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 404",
+                        "sit amen",
+                        "electram needle",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",];
+    assert_line_content(filter, expected);
+}
+
+fn assert_line_content(filter: Filter, expected: Vec<&str>) {
+    let actual = LINES.iter()
+        .parse(filter)
+        .map(|line| line.content_without_ansi.clone())
+        .collect::<Vec<_>>();
     assert_eq!(expected, actual);
 }
 

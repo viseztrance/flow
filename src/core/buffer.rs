@@ -20,7 +20,7 @@ use std::cmp::{min, max};
 use std::cell::Cell;
 use std::ops::Index;
 
-use core::line::{Line, LineCollection};
+use core::line::{Line, LineCollection, Parser as LineParser};
 use core::filter::Filter;
 use ui::search::Query;
 
@@ -101,7 +101,6 @@ impl<'a> IntoIterator for &'a BufferLines<'a> {
 
     fn into_iter(self) -> Self::IntoIter {
         let width = self.width.unwrap();
-        let mut filter = self.buffer.filter.clone();
         let mut estimated_height = 0;
 
         let height_within_boundary = |line: &&Line| -> bool {
@@ -112,8 +111,7 @@ impl<'a> IntoIterator for &'a BufferLines<'a> {
         let lines_iter = self.lines
             .entries
             .iter()
-            .filter(|line| filter.is_match(&line.content_without_ansi))
-            .rev();
+            .parse(self.buffer.filter.clone());
 
         let mut lines = match self.query {
             Some(ref value) => {
