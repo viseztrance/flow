@@ -129,7 +129,7 @@ impl InputField {
         }
     }
 
-    fn render(&self, color_pair: u64) {
+    fn render(&self, color_pair: u32) {
         wclear(self.window);
         wbkgd(self.window, color_pair);
         wattron(self.window, color_pair);
@@ -169,7 +169,7 @@ impl Options {
         }
     }
 
-    fn render(&self, color_pair: u64) {
+    fn render(&self, color_pair: u32) {
         wclear(self.window);
         readline::handle_redisplay();
         wbkgd(self.window, color_pair);
@@ -186,7 +186,7 @@ impl Options {
         wprintw(self.window, "rev");
     }
 
-    fn print_filter(&self, color_pair: u64) {
+    fn print_filter(&self, color_pair: u32) {
         wprintw(self.window, " / ");
         if self.filter_mode {
             wattron(self.window, COLOR_PAIR(2));
@@ -201,7 +201,7 @@ impl Options {
 
     fn make_shortcut(&self, letter: char) {
         wattron(self.window, A_UNDERLINE());
-        waddch(self.window, letter as u64);
+        waddch(self.window, letter as u32);
         wattroff(self.window, A_UNDERLINE());
     }
 }

@@ -71,7 +71,7 @@ impl Content {
 }
 
 pub struct State {
-    pub attributes: Vec<(usize, fn() -> u64)>,
+    pub attributes: Vec<(usize, fn() -> u32)>,
     pub foreground: i16,
     pub background: i16,
     pub highlighted_line: usize,
