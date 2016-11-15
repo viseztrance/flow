@@ -164,7 +164,7 @@ impl<'a> LinesPrinter<'a> {
                     line.print(&self.frame.content);
                 });
 
-                let is_match = query.filter_mode || line.contains(&query.text);
+                let is_match = query.filter || line.contains(&query.text);
                 let mut found_matches = None;
                 if is_match {
                     self.frame.navigation.search.matches_found = true;

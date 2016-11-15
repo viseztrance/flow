@@ -18,6 +18,7 @@
 
 use std::cell::RefCell;
 
+use regex::Regex;
 use ncurses::*;
 
 use ui::readline;
@@ -36,7 +37,7 @@ pub enum Highlight {
 
 pub struct Query {
     pub text: String,
-    pub filter_mode: bool,
+    pub filter: bool,
     pub highlight: Highlight,
 }
 
@@ -84,14 +85,14 @@ impl Search {
         } else {
             Some(Query {
                 text: self.input_field.text.borrow().clone(),
-                filter_mode: self.options.filter_mode,
+                filter: self.options.filter,
                 highlight: highlight,
             })
         }
     }
 
-    pub fn toggle_filter_mode(&mut self) {
-        self.options.filter_mode = !self.options.filter_mode;
+    pub fn toggle_filter(&mut self) {
+        self.options.filter = !self.options.filter;
         self.render();
     }
 
@@ -171,14 +172,18 @@ impl InputField {
 
 pub struct Options {
     pub window: WINDOW,
-    filter_mode: bool,
+    pub next: bool,
+    pub previous: bool,
+    filter: bool,
 }
 
 impl Options {
     fn new(parent_window: WINDOW) -> Options {
         Options {
             window: derwin(parent_window, 1, OPTIONS_WIDTH, 0, COLS() - OPTIONS_WIDTH),
-            filter_mode: false,
+            next: false,
+            previous: false,
+            filter: false,
         }
     }
 
@@ -187,8 +192,9 @@ impl Options {
         readline::handle_redisplay();
         wbkgd(self.window, color_pair);
 
-        self.print_navigation();
-        self.print_filter(color_pair);
+        self.print_label("[N]ext", self.next, color_pair);
+        self.print_label("[P]rev", self.previous, color_pair);
+        self.print_label("Filter [M]ode", self.filter, color_pair);
     }
 
     fn resize(&self, container_width: i32) {
@@ -197,30 +203,35 @@ impl Options {
         wrefresh(self.window);
     }
 
-    fn print_navigation(&self) {
-        wprintw(self.window, " / ");
-        self.make_shortcut('N');
-        wprintw(self.window, "ext / ");
-        self.make_shortcut('P');
-        wprintw(self.window, "rev");
-    }
+    fn print_label(&self, text: &str, active: bool, color_pair: u32) {
+        lazy_static! {
+            static ref SHORTCUT_MATCHER: Regex = Regex::new(r"(.*)?(\[(\w)\])(.*)?").unwrap();
+        }
 
-    fn print_filter(&self, color_pair: u32) {
         wprintw(self.window, " / ");
-        if self.filter_mode {
+
+        if active {
             wattron(self.window, COLOR_PAIR(2));
         }
-        wprintw(self.window, "Filter ");
-        self.make_shortcut('M');
-        wprintw(self.window, "ode");
-        if self.filter_mode {
+
+        for (i, capture) in SHORTCUT_MATCHER.captures(text).unwrap().iter().skip(1).enumerate() {
+            if !capture.unwrap().is_empty() {
+                match i {
+                    2 => {
+                        wattron(self.window, A_UNDERLINE());
+                        waddch(self.window, capture.unwrap().chars().next().unwrap() as u32);
+                        wattroff(self.window, A_UNDERLINE());
+                    }
+                    0 | 3 => {
+                        wprintw(self.window, capture.unwrap());
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if active {
             wattroff(self.window, color_pair);
         }
-    }
-
-    fn make_shortcut(&self, letter: char) {
-        wattron(self.window, A_UNDERLINE());
-        waddch(self.window, letter as u32);
-        wattroff(self.window, A_UNDERLINE());
     }
 }
