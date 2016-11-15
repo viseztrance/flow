@@ -20,6 +20,7 @@ extern crate lazy_static;
 
 extern crate libc;
 extern crate regex;
+extern crate time;
 extern crate toml;
 extern crate rustc_serialize;
 extern crate docopt;

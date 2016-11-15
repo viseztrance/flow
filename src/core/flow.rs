@@ -18,11 +18,14 @@
 
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::collections::HashMap;
+
+use time;
 
 use ui::readline;
 use utils::settings::Settings;
 use ui::frame::Frame;
-use ui::event::{Event, Direction, SearchAction, Offset};
+use ui::event::{Event, QueuedEvent, Direction, SearchAction, Offset};
 use ui::navigation::State as NavigationState;
 use ui::search::{State as QueryState, Highlight};
 
@@ -31,10 +34,13 @@ use core::line::LineCollection;
 use core::buffer::BufferCollection;
 use ext::signal::{self, SIGQUIT};
 
+const NANOSECONDS_IN_A_MILISECOND: u64 = 1_000_000;
+
 pub struct Flow {
     frame: Frame,
     lines: LineCollection,
     buffers: BufferCollection,
+    queue: HashMap<QueuedEvent, u64>,
 }
 
 impl Flow {
@@ -43,6 +49,7 @@ impl Flow {
             frame: Frame::new(settings.menu_item_names()),
             lines: LineCollection::new(settings.max_lines_count),
             buffers: BufferCollection::from_filters(settings.filters),
+            queue: HashMap::new(),
         }
     }
 
@@ -73,6 +80,7 @@ impl Flow {
                 Event::Search(action) => self.handle_search(action),
                 Event::Resize => self.resize(),
                 Event::Quit => self.quit(),
+                _ if !self.queue.is_empty() => self.execute_queue(),
                 _ => {
                     let mut mutex_guarded_lines = lines.lock().unwrap();
                     if !mutex_guarded_lines.is_empty() {
@@ -124,19 +132,25 @@ impl Flow {
         match action {
             SearchAction::ReadInput(keys) => {
                 if self.frame.navigation.search.input_field.read(keys) == QueryState::Changed {
-                    self.perform_search(Highlight::VisibleOrLast);
+                    self.enqueue(QueuedEvent::PerformSearch, 20);
                 }
             }
             SearchAction::FindNextMatch => {
                 readline::add_history();
+                self.frame.navigation.search.options.next = true;
                 self.perform_search(Highlight::Next);
+                let pending = QueuedEvent::Unhighlight(SearchAction::FindNextMatch);
+                self.enqueue(pending, 250);
             }
             SearchAction::FindPreviousMatch => {
                 readline::add_history();
+                self.frame.navigation.search.options.previous = true;
                 self.perform_search(Highlight::Previous);
+                let pending = QueuedEvent::Unhighlight(SearchAction::FindPreviousMatch);
+                self.enqueue(pending, 250);
             }
             SearchAction::ToggleFilterMode => {
-                self.frame.navigation.search.toggle_filter_mode();
+                self.frame.navigation.search.toggle_filter();
                 self.perform_search(Highlight::VisibleOrLast);
             }
         }
@@ -176,6 +190,39 @@ impl Flow {
         match self.frame.navigation.state {
             NavigationState::Search => self.perform_search(Highlight::Current),
             NavigationState::Menu => self.reset_view(),
+        }
+    }
+
+    fn enqueue(&mut self, event: QueuedEvent, offset_time: u64) {
+        let entry = self.queue.entry(event).or_insert(0);
+        *entry = time::precise_time_ns() + offset_time * NANOSECONDS_IN_A_MILISECOND;
+    }
+
+    fn execute_queue(&mut self) {
+        let current_time = time::precise_time_ns();
+        let events = self.queue
+            .iter()
+            .filter(|&(_, due_at)| *due_at < current_time)
+            .map(|(event, _)| event.clone())
+            .collect::<Vec<QueuedEvent>>();
+
+        for event in events {
+            self.queue.remove(&event);
+            match event {
+                QueuedEvent::PerformSearch => self.perform_search(Highlight::VisibleOrLast),
+                QueuedEvent::Unhighlight(action) => {
+                    match action {
+                        SearchAction::FindNextMatch => {
+                            self.frame.navigation.search.options.next = false;
+                        }
+                        SearchAction::FindPreviousMatch => {
+                            self.frame.navigation.search.options.previous = false;
+                        }
+                        _ => unreachable!(),
+                    }
+                    self.frame.navigation.render();
+                }
+            }
         }
     }
 

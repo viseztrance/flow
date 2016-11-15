@@ -25,6 +25,7 @@ pub enum Direction {
     Right,
 }
 
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum SearchAction {
     ReadInput(Vec<i32>),
     ToggleFilterMode,
@@ -47,6 +48,12 @@ pub enum Event {
     Resize,
     Quit,
     Other,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub enum QueuedEvent {
+    Unhighlight(SearchAction),
+    PerformSearch,
 }
 
 pub struct EventBuilder {

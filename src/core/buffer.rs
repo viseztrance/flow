@@ -116,8 +116,8 @@ impl<'a> IntoIterator for &'a BufferLines<'a> {
         let mut lines = match self.query {
             Some(ref value) => {
                 lines_iter.filter(|line| {
-                        !value.filter_mode ||
-                        (value.filter_mode && line.content_without_ansi.contains(&value.text))
+                        !value.filter ||
+                        (value.filter && line.content_without_ansi.contains(&value.text))
                     })
                     .take_while(height_within_boundary)
                     .collect::<Vec<_>>()
