@@ -48,4 +48,11 @@ impl Settings {
             filters: config.filters,
         }
     }
+
+    pub fn menu_item_names(&self) -> Vec<String> {
+        self.filters
+            .iter()
+            .map(|tab| tab.name.clone())
+            .collect()
+    }
 }

@@ -34,20 +34,15 @@ use ext::signal::{self, SIGQUIT};
 pub struct Flow {
     frame: Frame,
     lines: LineCollection,
-    buffer_collection: BufferCollection,
+    buffers: BufferCollection,
 }
 
 impl Flow {
     pub fn new(settings: Settings) -> Flow {
-        let menu_item_names = settings.filters
-            .iter()
-            .map(|tab| tab.name.clone())
-            .collect();
-
         Flow {
-            frame: Frame::new(menu_item_names),
+            frame: Frame::new(settings.menu_item_names()),
             lines: LineCollection::new(settings.max_lines_count),
-            buffer_collection: BufferCollection::from_filters(settings.filters),
+            buffers: BufferCollection::from_filters(settings.filters),
         }
     }
 
@@ -93,18 +88,18 @@ impl Flow {
         match direction {
             Direction::Left => {
                 self.frame.select_left_menu_item();
-                self.buffer_collection.select_previous();
+                self.buffers.select_previous();
             }
             Direction::Right => {
                 self.frame.select_right_menu_item();
-                self.buffer_collection.select_next();
+                self.buffers.select_next();
             }
         };
         self.reset_view();
     }
 
     fn scroll(&mut self, offset: Offset) {
-        let buffer = self.buffer_collection.selected_item();
+        let buffer = self.buffers.selected_item();
 
         match offset {
             Offset::Line(value) => {
@@ -166,14 +161,14 @@ impl Flow {
 
         self.reset_view_or_redo_search();
 
-        if self.buffer_collection.selected_item().is_scrolled() {
+        if self.buffers.selected_item().is_scrolled() {
             let offset = self.frame.rendered_lines.last_lines_height(count);
             self.scroll(Offset::Line(offset));
         }
     }
 
     fn reset_view(&mut self) {
-        let buffer = self.buffer_collection.selected_item();
+        let buffer = self.buffers.selected_item();
         self.frame.print(&mut buffer.with_lines(&self.lines), None);
     }
 
@@ -185,7 +180,7 @@ impl Flow {
     }
 
     fn perform_search(&mut self, highlight: Highlight) {
-        let buffer = self.buffer_collection.selected_item();
+        let buffer = self.buffers.selected_item();
         let query = self.frame.navigation.search.build_query(highlight);
         self.frame.print(&mut buffer.with_lines(&self.lines), query);
         self.frame.navigation.search.render();
