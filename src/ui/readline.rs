@@ -19,6 +19,7 @@
 use std::env;
 use libc::{FILE, free, c_void, c_char};
 use std::ffi::{CStr, CString};
+use std::cmp::max;
 
 use ncurses::*;
 use unicode_width::UnicodeWidthStr;
@@ -110,6 +111,14 @@ pub fn is_history() -> bool {
     }
 }
 
+fn history_file_path() -> *const i8 {
+    let mut path = env::home_dir().unwrap();
+    path.push(HISTORY_FILENAME);
+    let path_cstring = CString::new(path.to_str().unwrap()).unwrap();
+
+    path_cstring.as_ptr()
+}
+
 pub fn terminate() {
     unsafe {
         rl_callback_handler_remove();
@@ -124,9 +133,8 @@ pub fn read_prompt<'a>() -> &'a str {
     unsafe { cstr_ptr_to_str(rl_display_prompt) }
 }
 
-pub fn move_cursor() {
+fn read_cursor_position() -> i32 {
     unsafe {
-        let window = command_window.unwrap();
         let prompt = read_prompt();
         let buffer = read_buffer();
 
@@ -138,10 +146,46 @@ pub fn move_cursor() {
             })
             .collect::<String>()
             .width();
-        curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
-        wmove(window, 0, (prompt.width() + 1 + cursor_position) as i32);
-        wrefresh(window);
+        (prompt.width() + 1 + cursor_position) as i32
     }
+}
+
+fn wrapping_offset(cursor_position: i32) -> i32 {
+    let window = unsafe { command_window.unwrap() };
+    let mut x = 0;
+    let mut y = 0;
+    getmaxyx(window, &mut y, &mut x);
+
+    max(cursor_position - x + 1, 0)
+}
+
+pub fn move_cursor() {
+    let window = unsafe { command_window.unwrap() };
+    let cursor_position = read_cursor_position();
+    curs_set(CURSOR_VISIBILITY::CURSOR_VERY_VISIBLE);
+    wmove(window,
+          0,
+          cursor_position - wrapping_offset(cursor_position));
+    wrefresh(window);
+}
+
+pub extern "C" fn handle_redisplay() {
+    let window = unsafe { command_window.unwrap() };
+    let prompt = read_prompt();
+    let buffer = read_buffer();
+
+    werase(window);
+
+    if buffer.is_empty() {
+        wprintw(window, prompt);
+    } else {
+        let clipped_buffer = buffer.graphemes(true)
+            .skip(wrapping_offset(read_cursor_position()) as usize)
+            .collect::<String>();
+        wprintw(window, &format!("{} {}", prompt, clipped_buffer));
+    }
+
+    move_cursor();
 }
 
 extern "C" fn getc(_: *mut FILE) -> i32 {
@@ -155,22 +199,6 @@ extern "C" fn is_input_available() -> i32 {
     unsafe { input_available as i32 }
 }
 
-pub extern "C" fn handle_redisplay() {
-    let window = unsafe { command_window.unwrap() };
-    let prompt = read_prompt();
-    let buffer = read_buffer();
-
-    werase(window);
-
-    if buffer.is_empty() {
-        wprintw(window, prompt);
-    } else {
-        wprintw(window, &format!("{} {}", prompt, buffer));
-    }
-
-    move_cursor();
-}
-
 extern "C" fn handle_input(line_ptr: *mut c_char) {
     if line_ptr.is_null() {
         return;
@@ -179,14 +207,6 @@ extern "C" fn handle_input(line_ptr: *mut c_char) {
     unsafe {
         free(line_ptr as *mut c_void);
     }
-}
-
-fn history_file_path() -> *const i8 {
-    let mut path = env::home_dir().unwrap();
-    path.push(HISTORY_FILENAME);
-    let path_cstring = CString::new(path.to_str().unwrap()).unwrap();
-
-    path_cstring.as_ptr()
 }
 
 unsafe fn cstr_ptr_to_str<'a>(c_str: *const i8) -> &'a str {

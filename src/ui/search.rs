@@ -23,7 +23,7 @@ use ncurses::*;
 
 use ui::readline;
 
-static OPTIONS_WIDTH: i32 = 29;
+static OPTIONS_WIDTH: i32 = 31;
 static WITH_MATCHES_COLOR_PAIR_ID: i16 = 1;
 static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
 
@@ -191,6 +191,7 @@ impl Options {
         wclear(self.window);
         readline::handle_redisplay();
         wbkgd(self.window, color_pair);
+        wprintw(self.window, "  ");
 
         self.print_label("[N]ext", self.next, color_pair);
         self.print_label("[P]rev", self.previous, color_pair);
