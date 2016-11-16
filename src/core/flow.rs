@@ -221,6 +221,7 @@ impl Flow {
                         _ => unreachable!(),
                     }
                     self.frame.navigation.render();
+                    readline::move_cursor();
                 }
             }
         }
