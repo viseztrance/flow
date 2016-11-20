@@ -31,7 +31,7 @@ lazy_static! {
         "Setting database",
         "Started POST",
         "dolor needle",
-        "sit amen",
+        "sit amen mel",
         "Completed 200",
         "Started GET",
         "quo natum",
@@ -169,6 +169,25 @@ fn filters_entries_by_start_boundary() {
 }
 
 #[test]
+fn filters_entries_by_main_content_and_start_boundary() {
+    let filter = toml_string_to_filter(r##"
+       name = "GET requests"
+       starts_with = "Started (?P<matching>GET)?"
+       contains = "mel"
+    "##);
+
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",];
+    assert_line_content(filter, expected);
+}
+
+#[test]
 fn filters_entries_by_end_boundary() {
     let filter = toml_string_to_filter(r##"
        name = "GET requests"
@@ -176,22 +195,42 @@ fn filters_entries_by_end_boundary() {
     "##);
 
     let expected = vec!["Completed 200",
-                         "sit ea NEEDLE ignota",
-                         "concludaturque mel",
-                         "Started GET",
-                         "Completed 200",
-                         "neglegentur id",
-                         "graece ceteros",
-                         "Started GET",
-                         "Completed 200",
-                         "mel elit needle",
-                         "quo natum",
-                         "Started GET",
-                         "Completed 200",
-                         "sit amen",
-                         "dolor needle",
-                         "Started POST",
-                         "Setting database",];
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 200",
+                        "neglegentur id",
+                        "graece ceteros",
+                        "Started GET",
+                        "Completed 200",
+                        "mel elit needle",
+                        "quo natum",
+                        "Started GET",
+                        "Completed 200",
+                        "sit amen mel",
+                        "dolor needle",
+                        "Started POST",
+                        "Setting database",];
+    assert_line_content(filter, expected);
+}
+
+#[test]
+fn filters_entries_by_main_content_and_end_boundary() {
+    let filter = toml_string_to_filter(r##"
+       name = "GET requests"
+       contains = "sit"
+       ends_with = "Completed (?P<matching>200)?"
+    "##);
+
+    let expected = vec!["Completed 200",
+                        "sit ea NEEDLE ignota",
+                        "concludaturque mel",
+                        "Started GET",
+                        "Completed 200",
+                        "sit amen mel",
+                        "dolor needle",
+                        "Started POST",
+                        "Setting database",];
     assert_line_content(filter, expected);
 }
 

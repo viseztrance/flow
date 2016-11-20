@@ -22,8 +22,7 @@ use std::iter::{Rev, DoubleEndedIterator};
 
 use unicode_width::UnicodeWidthStr;
 
-use core::filter::{Filter, Parser as FilterParser, Kind as FilterKind,
-                   ParserResult as FilterParserResult};
+use core::filter::{Filter, Parser as FilterParser, Constraint, ParserResult as FilterParserResult};
 use utils::ansi_decoder::{ComponentCollection, AnsiStr};
 
 pub struct Line {
@@ -125,8 +124,7 @@ impl<'a, I> ParserState<'a, I>
 
     fn handle_boundaries(&mut self) -> Option<I::Item> {
         if self.pending.is_empty() {
-            // There are no invalid pending entries for `End` filters
-            let mut match_found = self.parser.kind == FilterKind::End;
+            let mut match_found = false;
 
             for line in &mut self.iterator {
                 match self.parser.matches(&line.content_without_ansi) {
@@ -138,11 +136,18 @@ impl<'a, I> ParserState<'a, I>
                         }
                         break;
                     }
-                    FilterParserResult::Invalid => self.pending.clear(),
+                    FilterParserResult::Invalid(append) => {
+                        self.pending.clear();
+
+                        if append {
+                            self.pending.push(line);
+                        }
+
+                    }
                     FilterParserResult::NoMatch => {}
                 }
             }
-            if !match_found {
+            if !(match_found || self.parser.assume_found_matches()) {
                 return None;
             }
 
@@ -178,10 +183,12 @@ impl<'a, I> Iterator for ParserState<'a, I>
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.parser.kind {
-            FilterKind::Empty => self.handle_empty(),
-            FilterKind::Content => self.handle_content(),
-            _ => self.handle_boundaries(),
+        if self.parser.constraints.is_empty() {
+            self.handle_empty()
+        } else if self.parser.constraints == vec![Constraint::Content] {
+            self.handle_content()
+        } else {
+            self.handle_boundaries()
         }
     }
 }

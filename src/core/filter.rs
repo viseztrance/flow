@@ -19,17 +19,8 @@
 use regex::Regex;
 use rustc_serialize::{Decodable, Decoder};
 
-#[derive(PartialEq)]
-pub enum Kind {
-    Empty,
-    Start,
-    Content,
-    End,
-    StartEnd,
-    StartContentEnd,
-}
-
-pub enum Match {
+#[derive(Clone, PartialEq, Debug)]
+pub enum Constraint {
     Start,
     Content,
     End,
@@ -71,59 +62,96 @@ pub enum ParserResult {
     Match,
     NoMatch,
     LastMatch(bool),
-    Invalid,
+    Invalid(bool),
 }
 
 pub struct Parser {
     pub filter: Filter,
-    pub kind: Kind,
-    last_match: Match,
+    pub constraints: Vec<Constraint>,
+    active_constraint: Constraint,
+    first_match: bool,
 }
 
 impl Parser {
     pub fn new(filter: Filter) -> Parser {
-        let kind = if filter.start.is_some() && filter.content.is_some() && filter.end.is_some() {
-            Kind::StartContentEnd
-        } else if filter.start.is_some() && filter.end.is_some() {
-            Kind::StartEnd
-        } else if filter.content.is_some() {
-            Kind::Content
-        } else if filter.start.is_some() {
-            Kind::Start
-        } else if filter.end.is_some() {
-            Kind::End
-        } else {
-            Kind::Empty
-        };
-
         Parser {
+            active_constraint: Constraint::Content,
+            constraints: filter.determine_constraints(),
             filter: filter,
-            kind: kind,
-            last_match: Match::Start,
+            first_match: true,
         }
     }
 
     pub fn matches(&mut self, text: &str) -> ParserResult {
-        match self.kind {
-            Kind::Start => self.handle_start(text),
-            Kind::End => self.handle_end(text),
-            Kind::StartEnd => self.handle_start_end(text),
-            Kind::StartContentEnd => self.handle_start_content_end(text),
-            _ => unreachable!(),
+        if self.constraints == vec![Constraint::End] {
+            self.end_constraint_parser(text).parse()
+        } else if self.constraints == vec![Constraint::End, Constraint::Content] {
+            self.content_end_constraints_parser(text).parse()
+        } else {
+            self.constraints_parser(text).parse()
         }
     }
 
-    fn handle_start(&mut self, text: &str) -> ParserResult {
-        let start = self.filter.start.as_ref().unwrap();
+    fn end_constraint_parser<'a>(&'a mut self, text: &'a str) -> EndConstraintParser<'a> {
+        EndConstraintParser {
+            text: text,
+            parser: self,
+        }
+    }
+
+    fn content_end_constraints_parser<'a>(&'a mut self,
+                                          text: &'a str)
+                                          -> ContentEndConstraintsParser<'a> {
+        ContentEndConstraintsParser {
+            text: text,
+            parser: self,
+        }
+    }
+
+    fn constraints_parser<'a>(&'a mut self, text: &'a str) -> ConstraintsParser<'a> {
+        ConstraintsParser {
+            text: text,
+            parser: self,
+        }
+    }
+
+    pub fn assume_found_matches(&self) -> bool {
+        self.constraints == [Constraint::End] ||
+        self.constraints == [Constraint::End, Constraint::Content] &&
+        self.active_constraint == Constraint::Content
+    }
+
+    fn next_constraint(&self) -> &Constraint {
+        let index = self.constraints.iter().position(|c| *c == self.active_constraint).unwrap_or(0);
+        self.constraints.get(index + 1).unwrap_or(&self.constraints[0])
+    }
+}
+
+struct ConstraintsParser<'a> {
+    text: &'a str,
+    parser: &'a mut Parser,
+}
+
+impl<'a> ConstraintsParser<'a> {
+    fn parse(&mut self) -> ParserResult {
+        match *self.parser.next_constraint() {
+            Constraint::Start => self.handle_start(),
+            Constraint::Content => self.handle_content(),
+            Constraint::End => self.handle_end(),
+        }
+    }
+
+    fn handle_start(&mut self) -> ParserResult {
+        let start = self.parser.filter.start.as_ref().unwrap();
         let mut result = ParserResult::Match;
 
-        if start.regex.is_match(text) {
-            self.last_match = Match::Start;
+        if start.regex.is_match(self.text) {
+            self.parser.active_constraint = Constraint::Start;
             result = ParserResult::LastMatch(true);
 
             if start.has_named_match {
-                if !start.is_named_match(text) {
-                    result = ParserResult::Invalid;
+                if !start.is_named_match(self.text) {
+                    result = ParserResult::Invalid(false);
                 }
             }
         }
@@ -131,73 +159,174 @@ impl Parser {
         result
     }
 
-    fn handle_end(&mut self, text: &str) -> ParserResult {
-        match self.last_match {
-            Match::Start => {
-                if self.filter.end.as_ref().unwrap().is_match(text) {
-                    self.last_match = Match::End;
-
-                    ParserResult::Match
-                } else {
-                    ParserResult::NoMatch
-                }
+    fn handle_content(&mut self) -> ParserResult {
+        if self.parser.filter.is_partial_match(Constraint::Start, self.text) ||
+           self.parser.filter.is_partial_match(Constraint::End, self.text) {
+            self.parser.active_constraint = self.parser.constraints.iter().last().unwrap().clone();
+            ParserResult::Invalid(false)
+        } else {
+            if self.parser.filter.content.as_ref().unwrap().is_match(self.text) {
+                self.parser.active_constraint = Constraint::Content;
             }
-            Match::End => {
-                let end = self.filter.end.as_ref().unwrap();
 
-                if end.regex.is_match(text) {
-                    if end.is_named_match(text) {
-                        ParserResult::LastMatch(true)
-                    } else {
-                        self.last_match = Match::Start;
-                        ParserResult::LastMatch(false)
-                    }
-                } else {
-                    ParserResult::Match
-                }
-            }
-            _ => unreachable!(),
+            ParserResult::Match
         }
     }
 
-    fn handle_start_end(&mut self, text: &str) -> ParserResult {
-        match self.last_match {
-            Match::Start => {
-                if self.filter.end.as_ref().unwrap().is_match(text) {
-                    self.last_match = Match::End;
+    fn handle_end(&mut self) -> ParserResult {
+        if self.parser.filter.end.as_ref().unwrap().is_match(self.text) {
+            self.parser.active_constraint = Constraint::End;
 
-                    ParserResult::Match
-                } else {
-                    ParserResult::NoMatch
-                }
-            }
-            Match::End => self.handle_start(text),
-            _ => unreachable!(),
+            ParserResult::Match
+        } else {
+            ParserResult::NoMatch
+        }
+    }
+}
+
+struct EndConstraintParser<'a> {
+    text: &'a str,
+    parser: &'a mut Parser,
+}
+
+impl<'a> EndConstraintParser<'a> {
+    fn parse(&mut self) -> ParserResult {
+        if self.parser.active_constraint == Constraint::End {
+            self.handle_normal_occurrence()
+        } else {
+            self.handle_first_occurrence()
         }
     }
 
-    fn handle_start_content_end(&mut self, text: &str) -> ParserResult {
-        match self.last_match {
-            Match::Start => {
-                if self.filter.end.as_ref().unwrap().is_match(text) {
-                    self.last_match = Match::End;
+    fn handle_first_occurrence(&mut self) -> ParserResult {
+        if self.parser.filter.end.as_ref().unwrap().is_match(self.text) {
+            self.parser.active_constraint = Constraint::End;
 
-                    ParserResult::Match
+            ParserResult::Match
+        } else {
+            ParserResult::NoMatch
+        }
+    }
+
+    fn handle_normal_occurrence(&mut self) -> ParserResult {
+        let end = self.parser.filter.end.as_ref().unwrap();
+
+        if end.regex.is_match(self.text) {
+            if end.is_named_match(self.text) {
+                ParserResult::LastMatch(true)
+            } else {
+                self.parser.active_constraint = Constraint::Start;
+                ParserResult::LastMatch(false)
+            }
+        } else {
+            ParserResult::Match
+        }
+    }
+}
+
+struct ContentEndConstraintsParser<'a> {
+    text: &'a str,
+    parser: &'a mut Parser,
+}
+
+impl<'a> ContentEndConstraintsParser<'a> {
+    fn parse(&mut self) -> ParserResult {
+        match *self.parser.next_constraint() {
+            Constraint::Start => unreachable!(),
+            Constraint::Content => self.handle_content(),
+            Constraint::End => {
+                if self.parser.first_match {
+                    self.handle_first_end_occurrence()
                 } else {
-                    ParserResult::NoMatch
+                    self.handle_normal_end_occurrence()
                 }
             }
-            Match::Content => self.handle_start(text),
-            Match::End => {
-                if self.filter.end.as_ref().unwrap().regex.is_match(text) ||
-                   self.filter.start.as_ref().unwrap().regex.is_match(text) {
-                    self.last_match = Match::Start;
-                    ParserResult::Invalid
-                } else {
-                    if self.filter.content.as_ref().unwrap().is_match(text) {
-                        self.last_match = Match::Content;
-                    }
-                    ParserResult::Match
+        }
+    }
+
+    fn handle_content(&mut self) -> ParserResult {
+        let end = self.parser.filter.end.as_ref().unwrap();
+
+        if end.regex.is_match(self.text) {
+            let is_match = end.is_named_match(self.text);
+            if !is_match {
+                self.parser.first_match = true;
+                self.parser.active_constraint = Constraint::Content;
+            }
+            ParserResult::Invalid(is_match)
+        } else {
+            if self.parser.filter.content.as_ref().unwrap().is_match(self.text) {
+                self.parser.active_constraint = Constraint::Content;
+            }
+            ParserResult::Match
+        }
+    }
+
+    fn handle_first_end_occurrence(&mut self) -> ParserResult {
+        if self.parser.filter.end.as_ref().unwrap().is_match(self.text) {
+            self.parser.first_match = false;
+            self.parser.active_constraint = Constraint::End;
+
+            ParserResult::Match
+        } else {
+            ParserResult::NoMatch
+        }
+    }
+
+    fn handle_normal_end_occurrence(&mut self) -> ParserResult {
+        let end = self.parser.filter.end.as_ref().unwrap();
+
+        if end.regex.is_match(self.text) {
+            if end.is_named_match(self.text) {
+                self.parser.active_constraint = Constraint::End;
+                ParserResult::LastMatch(true)
+            } else {
+                self.parser.first_match = true;
+                ParserResult::LastMatch(false)
+            }
+        } else {
+            ParserResult::Match
+        }
+    }
+}
+
+impl Filter {
+    fn determine_constraints(&self) -> Vec<Constraint> {
+        let mut constraints = vec![];
+
+        if self.end.is_some() {
+            constraints.push(Constraint::End);
+        }
+
+        if self.content.is_some() {
+            constraints.push(Constraint::Content);
+        }
+
+        if self.start.is_some() {
+            constraints.push(Constraint::Start);
+        }
+
+        constraints
+    }
+
+    fn is_partial_match(&self, constraint: Constraint, text: &str) -> bool {
+        match constraint {
+            Constraint::Start => {
+                match self.start {
+                    Some(ref start) => start.regex.is_match(text),
+                    None => false,
+                }
+            }
+            Constraint::Content => {
+                match self.content {
+                    Some(ref content) => content.is_match(text),
+                    None => false,
+                }
+            }
+            Constraint::End => {
+                match self.end {
+                    Some(ref end) => end.regex.is_match(text),
+                    None => false,
                 }
             }
         }
