@@ -115,7 +115,7 @@ impl Frame {
     }
 
     pub fn max_scroll_value(&self) -> usize {
-        (self.rendered_lines.height() - self.height) as usize
+        (self.rendered_lines.height() - self.content_height()) as usize
     }
 
     pub fn content_height(&self) -> i32 {
