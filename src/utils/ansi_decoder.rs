@@ -64,11 +64,13 @@ lazy_static! {
     };
 }
 
+#[derive(Clone)]
 pub enum Component {
     Style(&'static Style),
     Content(String),
 }
 
+#[derive(Clone)]
 pub struct ComponentCollection {
     pub items: Vec<Component>,
 }

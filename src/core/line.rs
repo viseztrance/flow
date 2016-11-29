@@ -25,6 +25,7 @@ use unicode_width::UnicodeWidthStr;
 use core::filter::{Filter, Parser as FilterParser, Constraint, ParserResult as FilterParserResult};
 use utils::ansi_decoder::{ComponentCollection, AnsiStr};
 
+#[derive(Clone)]
 pub struct Line {
     pub content_without_ansi: String,
     pub components: Option<ComponentCollection>,

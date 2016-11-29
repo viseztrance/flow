@@ -36,6 +36,7 @@ pub struct Frame {
     pub width: i32,
     pub height: i32,
     pub rendered_lines: RenderedLineCollection,
+    pub initial_rendered_lines: Option<RenderedLineCollection>,
     pub navigation: Navigation,
     pub content: Content,
 }
@@ -52,6 +53,7 @@ impl Frame {
             width: COLS(),
             height: LINES(),
             rendered_lines: RenderedLineCollection::default(),
+            initial_rendered_lines: None,
             navigation: Navigation::new(LINES() - NAVIGATION_HEIGHT, 0, &menu_item_names),
             content: Content::new(COLS()),
         }
@@ -85,9 +87,9 @@ impl Frame {
     }
 
     pub fn print(&mut self, buffer_lines: &mut BufferLines, query: Option<Query>) {
-        buffer_lines.set_context(self.width as usize, query);
+        buffer_lines.width = self.width as usize;
 
-        LinesPrinter::new(self, buffer_lines).draw();
+        LinesPrinter::new(self, buffer_lines, query).draw();
         self.scroll(buffer_lines.buffer.reverse_index.get() as i32);
     }
 
@@ -110,6 +112,7 @@ impl Frame {
 
     pub fn reset(&mut self) {
         self.rendered_lines.clear();
+        self.initial_rendered_lines = None;
         self.content.clear();
         self.navigation.search.matches_found = false;
     }
@@ -120,6 +123,14 @@ impl Frame {
 
     pub fn content_height(&self) -> i32 {
         self.height - NAVIGATION_HEIGHT
+    }
+
+    pub fn replace_rendered_lines(&mut self, rendered_lines: RenderedLineCollection) {
+        if self.initial_rendered_lines.is_none() {
+            self.initial_rendered_lines = Some(self.rendered_lines.clone());
+        }
+
+        self.rendered_lines = rendered_lines;
     }
 }
 

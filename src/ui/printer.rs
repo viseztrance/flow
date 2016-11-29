@@ -16,9 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefMut;
-use unicode_width::UnicodeWidthStr;
-
 use ncurses::*;
 
 use core::line::Line;
@@ -26,9 +23,9 @@ use core::buffer::BufferLines;
 use utils::ansi_decoder::{Component, Style};
 use ui::frame::{Frame, NORMAL_HIGHLIGHT_COLOR, CURRENT_HIGHLIGHT_COLOR};
 use ui::color::ColorPair;
-use ui::content::{Content, State as ContentState};
-use ui::search::{Query, Highlight};
-use ui::rendered_line::RenderedLineCollection;
+use ui::content::Content;
+use ui::search::Query;
+use ui::highlighter::{Highlight, LineHighlighter, State as HighlightState};
 
 pub trait Print {
     fn print(&self, content: &Content);
@@ -121,20 +118,32 @@ pub struct LinesPrinter<'a> {
     frame: &'a mut Frame,
     height: i32,
     buffer_lines: &'a BufferLines<'a>,
+    query: Option<Query>,
 }
 
 impl<'a> LinesPrinter<'a> {
-    pub fn new(frame: &'a mut Frame, lines: &'a BufferLines<'a>) -> LinesPrinter<'a> {
+    pub fn new(frame: &'a mut Frame,
+               lines: &'a BufferLines<'a>,
+               query: Option<Query>)
+               -> LinesPrinter<'a> {
         LinesPrinter {
             frame: frame,
             height: 0,
             buffer_lines: lines,
+            query: query,
         }
     }
 
     pub fn draw(&mut self) {
-        if let Some(ref query) = self.buffer_lines.query {
-            self.handle_print_with_search(query);
+        if self.query.is_some() {
+            if self.query.as_ref().unwrap().filter {
+                self.handle_filter()
+            } else {
+                if self.frame.initial_rendered_lines.is_some() {
+                    self.handle_print();
+                }
+                self.handle_search();
+            }
         } else {
             self.handle_print();
         }
@@ -150,46 +159,80 @@ impl<'a> LinesPrinter<'a> {
             });
 
             self.height += actual_height;
-            self.frame.rendered_lines.create(actual_height, None);
+            self.frame.rendered_lines.create(line.clone(), actual_height, None);
         }
     }
 
-    fn handle_print_with_search(&mut self, query: &Query) {
+    fn handle_search(&mut self) {
+        let query = self.query.as_ref().unwrap();
+
         if query.highlight == Highlight::VisibleOrLast || query.highlight == Highlight::Current {
-            self.frame.reset();
+            self.frame.navigation.search.matches_found = false;
             self.height = 0;
 
-            for line in self.buffer_lines {
-                let actual_height = self.frame.content.calculate_height_change(|| {
-                    line.print(&self.frame.content);
-                });
-
-                let is_match = query.filter || line.contains(&query.text);
-                let mut found_matches = None;
-                if is_match {
+            for rendered_line in self.frame
+                .rendered_lines
+                .entries
+                .iter_mut() {
+                if rendered_line.search(&query.text,
+                                        &self.frame.content,
+                                        self.frame.width,
+                                        self.height) {
                     self.frame.navigation.search.matches_found = true;
-                    let highlighter =
-                        LineHighlighter::new(self.frame, line, NORMAL_HIGHLIGHT_COLOR);
-                    found_matches =
-                        Some(highlighter.print(&query.text, self.height, actual_height));
                 }
 
-                self.height += actual_height;
-                self.frame.rendered_lines.create(actual_height, found_matches);
+                self.height += rendered_line.height;
             }
+            if query.highlight == Highlight::Current && self.highlight_doesnt_require_update() {
+                self.highlight_current_item(&query.text, CURRENT_HIGHLIGHT_COLOR);
+            } else if self.frame.navigation.search.matches_found {
+                self.update_current_and_highlight_item();
+            }
+        } else if self.frame.navigation.search.matches_found {
+            self.highlight_current_item(&query.text, NORMAL_HIGHLIGHT_COLOR);
+            self.update_current_and_highlight_item();
+        }
+    }
+
+    fn handle_filter(&mut self) {
+        let query = self.query.as_ref().unwrap();
+
+        if query.highlight == Highlight::VisibleOrLast || query.highlight == Highlight::Current {
+            self.frame.content.clear();
+            self.height = 0;
+
+            let mut filtered_rendered_lines = self.frame
+                .initial_rendered_lines
+                .as_mut()
+                .unwrap_or(&mut self.frame.rendered_lines)
+                .matching(&query.text);
+            self.frame.navigation.search.matches_found = !filtered_rendered_lines.is_empty();
+
+            for rendered_line in filtered_rendered_lines.entries.iter_mut() {
+                rendered_line.print(&self.frame.content, self.height);
+                rendered_line.found_matches = rendered_line.highlight(&query.text,
+                                                                      &self.frame.content,
+                                                                      self.frame.width,
+                                                                      self.height);
+
+                self.height += rendered_line.height;
+            }
+
+            self.frame.replace_rendered_lines(filtered_rendered_lines);
 
             if query.highlight == Highlight::Current && self.highlight_doesnt_require_update() {
                 self.highlight_current_item(&query.text, CURRENT_HIGHLIGHT_COLOR);
             } else if self.frame.navigation.search.matches_found {
-                self.update_current_and_highlight_item(query);
+                self.update_current_and_highlight_item();
             }
         } else if self.frame.navigation.search.matches_found {
             self.highlight_current_item(&query.text, NORMAL_HIGHLIGHT_COLOR);
-            self.update_current_and_highlight_item(query);
+            self.update_current_and_highlight_item();
         }
     }
 
-    fn update_current_and_highlight_item(&self, query: &Query) {
+    fn update_current_and_highlight_item(&self) {
+        let query = self.query.as_ref().unwrap();
         let viewport = Viewport::new(self.buffer_lines.buffer.reverse_index.get(),
                                      self.frame.content_height() as usize);
 
@@ -207,12 +250,13 @@ impl<'a> LinesPrinter<'a> {
 
     fn highlight_current_item(&self, text: &str, color: i16) {
         let state = self.frame.content.state.borrow();
-        let line = &self.buffer_lines[state.highlighted_line];
+        let line = &self.frame.rendered_lines[state.highlighted_line].line;
 
         let accumulated_height = self.frame
             .rendered_lines
             .height_up_to_index(state.highlighted_line);
-        let highlighter = LineHighlighter::new(self.frame, line, color);
+        let highlighter =
+            LineHighlighter::new(self.frame.content.window, line, self.frame.width, color);
         highlighter.print_single_match(text, state.highlighted_match, accumulated_height);
     }
 
@@ -229,122 +273,5 @@ impl<'a> LinesPrinter<'a> {
     fn highlight_doesnt_require_update(&self) -> bool {
         let state = self.frame.content.state.borrow();
         self.frame.rendered_lines[state.highlighted_line].found_matches.is_some()
-    }
-}
-
-struct LineHighlighter<'a> {
-    line: &'a Line,
-    window: WINDOW,
-    container_width: i32,
-    color_pair_id: i16,
-}
-
-impl<'a> LineHighlighter<'a> {
-    fn new(frame: &'a Frame, line: &'a Line, color_pair_id: i16) -> LineHighlighter<'a> {
-        LineHighlighter {
-            line: line,
-            window: frame.content.window,
-            container_width: frame.width,
-            color_pair_id: color_pair_id,
-        }
-    }
-
-    fn print(&self, text: &str, accumulated_height: i32, line_height: i32) -> Vec<usize> {
-        let mut locations = vec![];
-
-        let matches = &self.line.matches_for(text);
-
-        for &(offset_x, value) in matches {
-            let location = self.handle_match(offset_x as i32, accumulated_height, value);
-            locations.push(location);
-        }
-
-        wmove(self.window, accumulated_height + line_height, 0);
-
-        locations
-    }
-
-    fn print_single_match(&self, text: &str, index: usize, offset_y: i32) {
-        let (offset_x, value) = self.line.matches_for(text)[index];
-        self.handle_match(offset_x as i32, offset_y, value);
-    }
-
-    fn handle_match(&self, mut offset_x: i32, mut offset_y: i32, value: &str) -> usize {
-        let initial_offset_y = offset_y;
-
-        offset_x = self.line.content_without_ansi.split_at(offset_x as usize).0.width() as i32;
-        offset_y += offset_x / self.container_width;
-        offset_x %= self.container_width;
-
-        wattron(self.window, COLOR_PAIR(self.color_pair_id));
-        mvwprintw(self.window, offset_y, offset_x, value);
-        wattroff(self.window, COLOR_PAIR(self.color_pair_id));
-
-        (offset_y - initial_offset_y) as usize
-    }
-}
-
-struct HighlightState<'a> {
-    state: RefMut<'a, ContentState>,
-    rendered_lines: &'a RenderedLineCollection,
-    viewport: Viewport,
-}
-
-impl<'a> HighlightState<'a> {
-    fn new(state: RefMut<'a, ContentState>,
-           rendered_lines: &'a RenderedLineCollection,
-           viewport: Viewport)
-           -> HighlightState<'a> {
-        HighlightState {
-            state: state,
-            rendered_lines: rendered_lines,
-            viewport: viewport,
-        }
-    }
-
-    fn update(&mut self, highlight: &Highlight) {
-        match *highlight {
-            Highlight::VisibleOrLast | Highlight::Current => self.handle_visible_or_last(),
-            Highlight::Next => self.handle_next(),
-            Highlight::Previous => self.handle_previous(),
-        }
-    }
-
-    fn handle_visible_or_last(&mut self) {
-        let matched_line = self.rendered_lines
-            .viewport_match(&self.viewport)
-            .unwrap_or(self.rendered_lines.last_match());
-
-        self.state.highlighted_line = self.rendered_lines.len() - matched_line.line - 1;
-        self.state.highlighted_match = matched_line.match_index;
-    }
-
-    fn handle_next(&mut self) {
-        let rendered_line = &self.rendered_lines[self.state.highlighted_line];
-        if self.state.highlighted_match < rendered_line.match_count() - 1 {
-            self.state.highlighted_match += 1;
-        } else {
-            let matched_line_opt = self.rendered_lines
-                .next_match(self.state.highlighted_line);
-
-            if let Some(matched_line) = matched_line_opt {
-                self.state.highlighted_line = matched_line.line;
-                self.state.highlighted_match = 0;
-            }
-        }
-    }
-
-    fn handle_previous(&mut self) {
-        if self.state.highlighted_match > 0 {
-            self.state.highlighted_match -= 1;
-        } else if self.state.highlighted_line > 0 {
-            let matched_line_opt = self.rendered_lines
-                .previous_match(self.state.highlighted_line);
-
-            if let Some(matched_line) = matched_line_opt {
-                self.state.highlighted_line = matched_line.line;
-                self.state.highlighted_match = matched_line.match_index;
-            }
-        }
     }
 }

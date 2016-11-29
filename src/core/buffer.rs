@@ -18,11 +18,9 @@
 
 use std::cmp::{min, max};
 use std::cell::Cell;
-use std::ops::Index;
 
 use core::line::{Line, LineCollection, Parser as LineParser};
 use core::filter::Filter;
-use ui::search::Query;
 
 static DEFAULT_REVERSE_INDEX: usize = 0;
 static MAX_LINES_RENDERED: usize = 2_000;
@@ -64,8 +62,7 @@ impl Buffer {
 pub struct BufferLines<'a> {
     lines: &'a LineCollection,
     pub buffer: &'a Buffer,
-    pub width: Option<usize>,
-    pub query: Option<Query>,
+    pub width: usize,
 }
 
 impl<'a> BufferLines<'a> {
@@ -73,25 +70,8 @@ impl<'a> BufferLines<'a> {
         BufferLines {
             buffer: buffer,
             lines: lines,
-            width: None,
-            query: None,
+            width: 0,
         }
-    }
-
-    pub fn set_context(&mut self, width: usize, query: Option<Query>) {
-        self.width = Some(width);
-        self.query = query;
-    }
-}
-
-impl<'a> Index<usize> for BufferLines<'a> {
-    type Output = Line;
-
-    fn index(&self, _index: usize) -> &Line {
-        self.into_iter()
-            .skip(_index)
-            .next()
-            .unwrap()
     }
 }
 
@@ -100,31 +80,19 @@ impl<'a> IntoIterator for &'a BufferLines<'a> {
     type IntoIter = ::std::vec::IntoIter<&'a Line>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let width = self.width.unwrap();
         let mut estimated_height = 0;
 
         let height_within_boundary = |line: &&Line| -> bool {
-            estimated_height += line.guess_height(width);
+            estimated_height += line.guess_height(self.width);
             estimated_height <= MAX_LINES_RENDERED
         };
 
-        let lines_iter = self.lines
+        let mut lines = self.lines
             .entries
             .iter()
-            .parse(self.buffer.filter.clone());
-
-        let mut lines = match self.query {
-            Some(ref value) => {
-                lines_iter.filter(|line| {
-                        !value.filter ||
-                        (value.filter && line.content_without_ansi.contains(&value.text))
-                    })
-                    .take_while(height_within_boundary)
-                    .collect::<Vec<_>>()
-            }
-            None => lines_iter.take_while(height_within_boundary).collect::<Vec<_>>(),
-        };
-
+            .parse(self.buffer.filter.clone())
+            .take_while(height_within_boundary)
+            .collect::<Vec<_>>();
         lines.reverse();
         lines.into_iter()
     }

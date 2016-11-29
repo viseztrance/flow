@@ -27,7 +27,8 @@ use utils::settings::Settings;
 use ui::frame::Frame;
 use ui::event::{Event, QueuedEvent, Direction, SearchAction, Offset};
 use ui::navigation::State as NavigationState;
-use ui::search::{State as QueryState, Highlight};
+use ui::search::State as QueryState;
+use ui::highlighter::Highlight;
 
 use core::runner::RUNNING;
 use core::line::LineCollection;
@@ -187,9 +188,10 @@ impl Flow {
     }
 
     fn reset_view_or_redo_search(&mut self) {
-        match self.frame.navigation.state {
-            NavigationState::Search => self.perform_search(Highlight::Current),
-            NavigationState::Menu => self.reset_view(),
+        self.reset_view();
+
+        if self.frame.navigation.state == NavigationState::Search {
+            self.perform_search(Highlight::Current);
         }
     }
 

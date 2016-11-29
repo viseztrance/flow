@@ -22,18 +22,11 @@ use regex::Regex;
 use ncurses::*;
 
 use ui::readline;
+use ui::highlighter::Highlight;
 
 static OPTIONS_WIDTH: i32 = 31;
 static WITH_MATCHES_COLOR_PAIR_ID: i16 = 1;
 static NO_MATCHES_COLOR_PAIR_ID: i16 = 4;
-
-#[derive(PartialEq)]
-pub enum Highlight {
-    VisibleOrLast,
-    Next,
-    Previous,
-    Current,
-}
 
 pub struct Query {
     pub text: String,

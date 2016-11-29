@@ -18,18 +18,76 @@
 
 use std::ops::Index;
 
-use ui::printer::Viewport;
+use ncurses::wmove;
 
+use core::line::Line;
+use ui::content::Content;
+use ui::frame::NORMAL_HIGHLIGHT_COLOR;
+use ui::printer::{Print, Viewport};
+use ui::highlighter::LineHighlighter;
+
+#[derive(Clone)]
 pub struct RenderedLine {
+    pub line: Line,
     pub height: i32,
     pub found_matches: Option<Vec<usize>>,
 }
 
 impl RenderedLine {
-    fn new(height: i32, found_matches: Option<Vec<usize>>) -> RenderedLine {
+    fn new(line: Line, height: i32, found_matches: Option<Vec<usize>>) -> RenderedLine {
         RenderedLine {
+            line: line,
             height: height,
             found_matches: found_matches,
+        }
+    }
+
+    pub fn search(&mut self,
+                  text: &str,
+                  content: &Content,
+                  container_width: i32,
+                  accumulated_height: i32)
+                  -> bool {
+        let is_match = self.line.contains(text);
+        let mut found_matches = None;
+
+        if is_match {
+            self.print(content, accumulated_height);
+            found_matches = self.highlight(text, content, container_width, accumulated_height);
+        }
+
+        if self.update_found_matches(found_matches) && !is_match {
+            self.print(content, accumulated_height);
+        }
+
+        is_match
+    }
+
+    pub fn highlight(&self,
+                     text: &str,
+                     content: &Content,
+                     container_width: i32,
+                     accumulated_height: i32)
+                     -> Option<Vec<usize>> {
+        let highlighter = LineHighlighter::new(content.window,
+                                               &self.line,
+                                               container_width,
+                                               NORMAL_HIGHLIGHT_COLOR);
+        Some(highlighter.print(text, accumulated_height, self.height))
+    }
+
+    pub fn print(&self, content: &Content, accumulated_height: i32) {
+        wmove(content.window, accumulated_height, 0);
+        self.line.print(content);
+    }
+
+    pub fn update_found_matches(&mut self, found_matches: Option<Vec<usize>>) -> bool {
+        if self.found_matches != found_matches {
+            self.found_matches = found_matches;
+
+            true
+        } else {
+            false
         }
     }
 
@@ -38,6 +96,7 @@ impl RenderedLine {
     }
 }
 
+#[derive(Clone)]
 pub struct RenderedLineCollection {
     pub entries: Vec<RenderedLine>,
 }
@@ -47,9 +106,19 @@ impl RenderedLineCollection {
         RenderedLineCollection { entries: vec![] }
     }
 
-    pub fn create(&mut self, height: i32, found_matches: Option<Vec<usize>>) {
-        let entry = RenderedLine::new(height, found_matches);
+    pub fn create(&mut self, line: Line, height: i32, found_matches: Option<Vec<usize>>) {
+        let entry = RenderedLine::new(line, height, found_matches);
         self.entries.push(entry);
+    }
+
+    pub fn matching(&mut self, text: &str) -> RenderedLineCollection {
+        RenderedLineCollection {
+            entries: self.entries
+                .iter()
+                .filter(|entry| entry.line.contains(text))
+                .map(|entry| entry.clone())
+                .collect::<Vec<_>>(),
+        }
     }
 
     pub fn height(&self) -> i32 {
@@ -62,6 +131,10 @@ impl RenderedLineCollection {
 
     pub fn len(&self) -> usize {
         self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     pub fn buffer_reverse_index(&self, line_index: usize, match_index: usize) -> i32 {
