@@ -3,6 +3,8 @@
 Flow is a [tail](https://en.wikipedia.org/wiki/Tail_(Unix)) like tool that can
 group and filter out data.
 
+![Preview](doc/preview.gif)
+
 ## Instalation
 
 Currently there are no prebuilt binaries, but with the help of people such as
