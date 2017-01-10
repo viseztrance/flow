@@ -130,7 +130,7 @@ impl InputField {
         }
     }
 
-    fn render(&self, color_pair: u32) {
+    fn render(&self, color_pair: attr_t) {
         wclear(self.window);
         wbkgd(self.window, color_pair);
         wattron(self.window, color_pair);
@@ -180,7 +180,7 @@ impl Options {
         }
     }
 
-    fn render(&self, color_pair: u32) {
+    fn render(&self, color_pair: attr_t) {
         wclear(self.window);
         readline::handle_redisplay();
         wbkgd(self.window, color_pair);
@@ -197,7 +197,7 @@ impl Options {
         wrefresh(self.window);
     }
 
-    fn print_label(&self, text: &str, active: bool, color_pair: u32) {
+    fn print_label(&self, text: &str, active: bool, color_pair: attr_t) {
         lazy_static! {
             static ref SHORTCUT_MATCHER: Regex = Regex::new(r"(.*)?(\[(\w)\])(.*)?").unwrap();
         }
@@ -213,7 +213,7 @@ impl Options {
                 match i {
                     2 => {
                         wattron(self.window, A_UNDERLINE());
-                        waddch(self.window, capture.unwrap().chars().next().unwrap() as u32);
+                        waddch(self.window, capture.unwrap().chars().next().unwrap() as chtype);
                         wattroff(self.window, A_UNDERLINE());
                     }
                     0 | 3 => {

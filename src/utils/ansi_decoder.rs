@@ -108,7 +108,7 @@ impl ComponentCollection {
 }
 
 pub enum Style {
-    Attribute(usize, fn() -> u32, bool),
+    Attribute(usize, fn() -> attr_t, bool),
     Color(Option<i16>, Option<i16>),
     Reset,
 }
