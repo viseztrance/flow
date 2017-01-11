@@ -209,18 +209,16 @@ impl Options {
         }
 
         for (i, capture) in SHORTCUT_MATCHER.captures(text).unwrap().iter().skip(1).enumerate() {
-            if !capture.unwrap().is_empty() {
-                match i {
-                    2 => {
-                        wattron(self.window, A_UNDERLINE());
-                        waddch(self.window, capture.unwrap().chars().next().unwrap() as chtype);
-                        wattroff(self.window, A_UNDERLINE());
-                    }
-                    0 | 3 => {
-                        wprintw(self.window, capture.unwrap());
-                    }
-                    _ => {}
+            match i {
+                2 => {
+                    wattron(self.window, A_UNDERLINE());
+                    waddch(self.window, capture.unwrap().as_str().chars().next().unwrap() as chtype);
+                    wattroff(self.window, A_UNDERLINE());
                 }
+                0 | 3 => {
+                    wprintw(self.window, capture.unwrap().as_str());
+                }
+                _ => {}
             }
         }
 

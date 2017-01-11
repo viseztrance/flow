@@ -84,13 +84,13 @@ impl ComponentCollection {
         }
 
         for capture in BREAK_ANSI_MATCHER.captures_iter(value) {
-            if capture.at(1).is_some() {
-                if let Some(style) = ANSI_TO_NCURSES_MAPPING.get(capture.at(1).unwrap()) {
+            if capture.get(1).is_some() {
+                if let Some(style) = ANSI_TO_NCURSES_MAPPING.get(capture.get(1).unwrap().as_str()) {
                     components.push(Component::Style(style))
                 }
             }
-            if capture.at(2).is_some() {
-                let content = capture.at(2).unwrap().to_string();
+            if capture.get(2).is_some() {
+                let content = capture.get(2).unwrap().as_str().to_string();
                 components.push(Component::Content(content));
             }
         }
@@ -130,7 +130,7 @@ impl AnsiStr for str {
         lazy_static! {
             static ref STRIP_ANSI_MATCHER: Regex = Regex::new(r"(\x1b\[\d+m)").unwrap();
         }
-        STRIP_ANSI_MATCHER.replace_all(self, "")
+        STRIP_ANSI_MATCHER.replace_all(self, "").to_string()
     }
 
     fn to_components(&self) -> ComponentCollection {

@@ -73,8 +73,8 @@ fn decodes_filter_with_content_constraint() {
 
     assert_eq!("Having content constraints", filter.name);
     assert!(filter.start.is_none());
-    let expected_contains = Some(Regex::new("body value").unwrap());
-    assert_eq!(expected_contains, filter.content);
+    let expected_contains = Regex::new("body value").unwrap();
+    assert_eq!(expected_contains.as_str(), filter.content.unwrap().as_str());
     assert!(filter.end.is_none());
 }
 
@@ -91,8 +91,8 @@ fn decodes_filter_with_boundary_constraints() {
 
     assert_eq!("Having boundary constraints", filter.name);
     assert!(filter.content.is_none());
-    assert_eq!(expected_starts_with, filter.start.unwrap().regex);
-    assert_eq!(expected_ends_with, filter.end.unwrap().regex);
+    assert_eq!(expected_starts_with.as_str(), filter.start.unwrap().regex.as_str());
+    assert_eq!(expected_ends_with.as_str(), filter.end.unwrap().regex.as_str());
 }
 
 #[test]
@@ -108,7 +108,7 @@ fn decodes_filter_with_boundary_match_constraints() {
 
     let expected_body_content = Regex::new("body value").unwrap();
     assert!(filter.start.unwrap().has_named_match);
-    assert_eq!(expected_body_content, filter.content.unwrap());
+    assert_eq!(expected_body_content.as_str(), filter.content.unwrap().as_str());
     assert!(!filter.end.unwrap().has_named_match);
 }
 
