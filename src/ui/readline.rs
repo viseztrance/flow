@@ -31,9 +31,16 @@ const HISTORY_FILENAME: &'static str = ".flow_history";
 const MAX_HISTORY_LINES: i32 = 1000;
 const MIN_HISTORY_LINE_WIDTH: usize = 2;
 
+#[allow(non_upper_case_globals)]
 static mut input: i32 = 0;
+
+#[allow(non_upper_case_globals)]
 static mut input_available: bool = false;
+
+#[allow(non_upper_case_globals)]
 static mut command_window: Option<WINDOW> = None;
+
+#[allow(non_upper_case_globals)]
 static mut last_history_item: &'static str = "\0";
 
 pub fn init() {

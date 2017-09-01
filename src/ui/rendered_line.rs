@@ -243,13 +243,13 @@ impl MatchedLine {
 }
 
 trait FindMatch {
-    fn find_match(mut self) -> Option<MatchedLine>;
+    fn find_match(&mut self) -> Option<MatchedLine>;
 }
 
 impl<'a, I> FindMatch for I
     where I: Iterator<Item = (usize, &'a RenderedLine)>
 {
-    fn find_match(mut self) -> Option<MatchedLine> {
+    fn find_match(&mut self) -> Option<MatchedLine> {
         if let Some(value) = self.find(|&idx_and_line| idx_and_line.1.found_matches.is_some()) {
             Some(MatchedLine::new(value.0, value.1.match_count() - 1))
         } else {
