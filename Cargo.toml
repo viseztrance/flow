@@ -28,7 +28,4 @@ time = "0.1"
 lazy_static = "0.2"
 unicode-width = "0.1.3"
 unicode-segmentation = "0.1.0"
-
-[dependencies.ncurses]
-version = "5.85"
-features = ["menu", "wide", "panel"]
+ncurses = { version = "^5.86.0", features = ["menu", "wide", "panel"] }
