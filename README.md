@@ -5,7 +5,7 @@ group and filter out data.
 
 ![Preview](doc/preview.gif)
 
-## Instalation
+## Installation
 
 Currently there are no prebuilt binaries, but with the help of people such as
 yourself, this will change.
@@ -26,7 +26,7 @@ Run `cargo install flow`
 
 ## Usage
 
-At a minimum, you can just provide the path to the log file you're insterested in:
+At a minimum, you can just provide the path to the log file you're interested in:
 
     flow path/to/log <options>
 
@@ -70,12 +70,12 @@ the provided log file.
 
 The second one has an extra option named `contains`, that *needs* to have a
 valid [regex](https://doc.rust-lang.org/regex/regex/index.html#syntax) syntax.
-In this example, only lines containg `xyz` (case insensitive) will be shown.
+In this example, only lines containing `xyz` (case insensitive) will be shown.
 
 The last filter has two extra options named `starts_with` and `ends_with` which
 also need to be valid regexes. This example will yield every line between the
 ones matching `Started POST` and `Completed 500`, as long as in between there is
-at least one containg `xyz`.
+at least one containing `xyz`.
 
 To yield the right content, it's very important to match all starting and end
 lines even if we have no interest in them – for example, in our case values such
